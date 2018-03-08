@@ -3,6 +3,8 @@ package t3bot
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"regexp"
 	"strings"
 
@@ -61,7 +63,41 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 				return roomsHTMLMessage, nil
 			},
 		},
+		types.Command{
+			Path: []string{"hitbtc"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				response, err := e.cmdHitBTC(cli, roomID, userID, args)
+				if err != nil {
+					return nil, err
+				} else {
+					return &gomatrix.TextMessage{"m.notice", *response}, nil
+				}
+			},
+		},
 	}
+}
+
+func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID string, args []string) (*string, error) {
+	query := strings.Join(args, "/")
+	log.Info("querying HitBTC for ", query)
+
+	url := "https://api.hitbtc.com/api/2/public/" + query
+	resp, err := http.Get(url)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("get of %s returned code %v", url, resp.StatusCode)
+	}
+	bodyBytes, err2 := ioutil.ReadAll(resp.Body)
+	if err2 != nil {
+		return nil, err2
+	}
+	bodyString := string(bodyBytes)
+	return &bodyString, nil
 }
 
 // Match message with bad words. Constuct pattern that it matches only once per

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/jaytaylor/html2text"
 	"github.com/matrix-org/go-neb/types"
 	"github.com/matrix-org/gomatrix"
 )
@@ -18,16 +19,6 @@ const ServiceType = "t3bot"
 type Service struct {
 	types.DefaultService
 }
-
-var roomsMessage = `
-Tezos General Chat: #tezos:matrix.org
-Tezos Price Chat: #tezostrader:matrix.org
-Tezos Media Chat: #tezosmedia:matrix.org
-Tezos Governance Chat: #tezosgovernance:matrix.org
-Tezos Ideas and Collaboration Chat: #tezosfoundry:matrix.org
-Tezos IRC Tech Chat: #freenode_#tezos:matrix.org
-Tezos Random Chat: #tezosrandom:matrix.org
-`
 
 var roomsMessageHTML = `
 Tezos General Chat: <a href="https://riot.im/app/#/room/#tezos:matrix.org">#tezos:matrix.org</a><br>
@@ -41,9 +32,16 @@ Tezos Random Chat: <a href="https://riot.im/app/#/room/#tezosrandom:matrix.org">
 
 var roomsHTMLMessage = gomatrix.HTMLMessage{
 	MsgType:       "m.notice",
-	Body:          roomsMessage,
 	Format:        "org.matrix.custom.html",
 	FormattedBody: roomsMessageHTML,
+}
+
+func init() {
+	text, err := html2text.FromString(roomsMessageHTML, html2text.Options{OmitLinks: true})
+	if err != nil {
+		panic(err)
+	}
+	roomsHTMLMessage.Body = text
 }
 
 // Commands supported:

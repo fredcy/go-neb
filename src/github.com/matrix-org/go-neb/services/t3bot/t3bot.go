@@ -68,7 +68,22 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		types.Command{
 			Path: []string{"hitbtc"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				response, err := e.cmdHitBTC(cli, roomID, userID, args)
+				query := strings.Join(args, "/")
+				response, err := e.cmdHitBTC(cli, roomID, userID, query)
+				if err != nil {
+					return nil, err
+				} else {
+					var out bytes.Buffer
+					json.Indent(&out, *response, "", "    ")
+					return &gomatrix.TextMessage{"m.notice", out.String()}, nil
+				}
+			},
+		},
+		types.Command{
+			Path: []string{"ticker"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				query := "ticker/" + strings.Join(args, "")
+				response, err := e.cmdHitBTC(cli, roomID, userID, query)
 				if err != nil {
 					return nil, err
 				} else {
@@ -81,8 +96,7 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 	}
 }
 
-func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID string, args []string) (*[]byte, error) {
-	query := strings.Join(args, "/")
+func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID, query string) (*[]byte, error) {
 	log.Info("querying HitBTC for ", query)
 
 	url := "https://api.hitbtc.com/api/2/public/" + query

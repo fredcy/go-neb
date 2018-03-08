@@ -2,6 +2,8 @@
 package t3bot
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -70,14 +72,16 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 				if err != nil {
 					return nil, err
 				} else {
-					return &gomatrix.TextMessage{"m.notice", *response}, nil
+					var out bytes.Buffer
+					json.Indent(&out, *response, "", "    ")
+					return &gomatrix.TextMessage{"m.notice", out.String()}, nil
 				}
 			},
 		},
 	}
 }
 
-func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID string, args []string) (*string, error) {
+func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID string, args []string) (*[]byte, error) {
 	query := strings.Join(args, "/")
 	log.Info("querying HitBTC for ", query)
 
@@ -96,8 +100,7 @@ func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID string, args
 	if err2 != nil {
 		return nil, err2
 	}
-	bodyString := string(bodyBytes)
-	return &bodyString, nil
+	return &bodyBytes, nil
 }
 
 // Match message with bad words. Constuct pattern that it matches only once per

@@ -132,7 +132,7 @@
 		{
 			"importpath": "github.com/jaytaylor/html2text",
 			"repository": "https://github.com/jaytaylor/html2text",
-			"revision": "24f9b0f63599c6bbecc3b773636b54f8d302db67",
+			"revision": "190166da35878a77103b951ae035a473531c1fc2",
 			"branch": "master"
 		},
 		{
@@ -151,6 +151,12 @@
 			"importpath": "github.com/matrix-org/util",
 			"repository": "https://github.com/matrix-org/util",
 			"revision": "ccef6dc7c24a7c896d96b433a9107b7c47ecf828",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/mattn/go-runewidth",
+			"repository": "https://github.com/mattn/go-runewidth",
+			"revision": "a9d6d1e4dc51df2130326793d49971f238839169",
 			"branch": "master"
 		},
 		{
@@ -182,6 +188,12 @@
 			"importpath": "github.com/mmcdole/goxpp",
 			"repository": "https://github.com/mmcdole/goxpp",
 			"revision": "e38884aa48c1952a416ba35f3c276e4f02f9b40e",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/olekukonko/tablewriter",
+			"repository": "https://github.com/olekukonko/tablewriter",
+			"revision": "b8a9be070da40449e501c3c4730a889e42d87a9e",
 			"branch": "master"
 		},
 		{
@@ -240,6 +252,12 @@
 			"importpath": "github.com/shurcooL/sanitized_anchor_name",
 			"repository": "https://github.com/shurcooL/sanitized_anchor_name",
 			"revision": "10ef21a441db47d8b13ebcc5fd2310f636973c77",
+			"branch": "master"
+		},
+		{
+			"importpath": "github.com/ssor/bom",
+			"repository": "https://github.com/ssor/bom",
+			"revision": "6386211fdfcf24c0bfbdaceafd02849ed9a8a509",
 			"branch": "master"
 		},
 		{

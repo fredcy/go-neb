@@ -1,10 +1,66 @@
 package html2text
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 	"regexp"
+	"strings"
 	"testing"
 )
+
+const destPath = "testdata"
+
+// EnableExtraLogging turns on additional testing log output.
+// Extra test logging can be enabled by setting the environment variable
+// HTML2TEXT_EXTRA_LOGGING to "1" or "true".
+var EnableExtraLogging bool
+
+func init() {
+	if v := os.Getenv("HTML2TEXT_EXTRA_LOGGING"); v == "1" || v == "true" {
+		EnableExtraLogging = true
+	}
+}
+
+// TODO Add tests for FromHTMLNode and FromReader.
+
+func TestParseUTF8(t *testing.T) {
+	htmlFiles := []struct {
+		file                  string
+		keywordShouldNotExist string
+		keywordShouldExist    string
+	}{
+		{
+			"utf8.html",
+			"学习之道:美国公认学习第一书title",
+			"次世界冠军赛上，我几近疯狂",
+		},
+		{
+			"utf8_with_bom.xhtml",
+			"1892年波兰文版序言title",
+			"种新的波兰文本已成为必要",
+		},
+	}
+
+	for _, htmlFile := range htmlFiles {
+		bs, err := ioutil.ReadFile(path.Join(destPath, htmlFile.file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		text, err := FromReader(bytes.NewReader(bs))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(text, htmlFile.keywordShouldExist) {
+			t.Fatalf("keyword %s should  exists in file %s", htmlFile.keywordShouldExist, htmlFile.file)
+		}
+		if strings.Contains(text, htmlFile.keywordShouldNotExist) {
+			t.Fatalf("keyword %s should not exists in file %s", htmlFile.keywordShouldNotExist, htmlFile.file)
+		}
+	}
+}
 
 func TestStrippingWhitespace(t *testing.T) {
 	testCases := []struct {
@@ -34,7 +90,11 @@ func TestStrippingWhitespace(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		if msg, err := wantString(testCase.input, testCase.output); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 }
 
@@ -79,45 +139,216 @@ func TestParagraphsAndBreaks(t *testing.T) {
 			"Test text<br><BR />Test text",
 			"Test text\n\nTest text",
 		},
+		{
+			"<pre>test1\ntest 2\n\ntest  3</pre>",
+			"test1\ntest 2\n\ntest  3",
+		},
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		if msg, err := wantString(testCase.input, testCase.output); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 }
 
 func TestTables(t *testing.T) {
 	testCases := []struct {
-		input  string
-		output string
+		input           string
+		tabularOutput   string
+		plaintextOutput string
 	}{
 		{
 			"<table><tr><td></td><td></td></tr></table>",
+			// Empty table
+			// +--+--+
+			// |  |  |
+			// +--+--+
+			"+--+--+\n|  |  |\n+--+--+",
 			"",
 		},
 		{
 			"<table><tr><td>cell1</td><td>cell2</td></tr></table>",
+			// +-------+-------+
+			// | cell1 | cell2 |
+			// +-------+-------+
+			"+-------+-------+\n| cell1 | cell2 |\n+-------+-------+",
 			"cell1 cell2",
 		},
 		{
 			"<table><tr><td>row1</td></tr><tr><td>row2</td></tr></table>",
-			"row1\nrow2",
+			// +------+
+			// | row1 |
+			// | row2 |
+			// +------+
+			"+------+\n| row1 |\n| row2 |\n+------+",
+			"row1 row2",
+		},
+		{
+			`<table>
+				<tbody>
+					<tr><td><p>Row-1-Col-1-Msg123456789012345</p><p>Row-1-Col-1-Msg2</p></td><td>Row-1-Col-2</td></tr>
+					<tr><td>Row-2-Col-1</td><td>Row-2-Col-2</td></tr>
+				</tbody>
+			</table>`,
+			// +--------------------------------+-------------+
+			// | Row-1-Col-1-Msg123456789012345 | Row-1-Col-2 |
+			// | Row-1-Col-1-Msg2               |             |
+			// | Row-2-Col-1                    | Row-2-Col-2 |
+			// +--------------------------------+-------------+
+			`+--------------------------------+-------------+
+| Row-1-Col-1-Msg123456789012345 | Row-1-Col-2 |
+| Row-1-Col-1-Msg2               |             |
+| Row-2-Col-1                    | Row-2-Col-2 |
++--------------------------------+-------------+`,
+			`Row-1-Col-1-Msg123456789012345
+
+Row-1-Col-1-Msg2
+
+Row-1-Col-2 Row-2-Col-1 Row-2-Col-2`,
 		},
 		{
 			`<table>
 			   <tr><td>cell1-1</td><td>cell1-2</td></tr>
 			   <tr><td>cell2-1</td><td>cell2-2</td></tr>
 			</table>`,
-			"cell1-1 cell1-2\ncell2-1 cell2-2",
+			// +---------+---------+
+			// | cell1-1 | cell1-2 |
+			// | cell2-1 | cell2-2 |
+			// +---------+---------+
+			"+---------+---------+\n| cell1-1 | cell1-2 |\n| cell2-1 | cell2-2 |\n+---------+---------+",
+			"cell1-1 cell1-2 cell2-1 cell2-2",
+		},
+		{
+			`<table>
+				<thead>
+					<tr><th>Header 1</th><th>Header 2</th></tr>
+				</thead>
+				<tfoot>
+					<tr><td>Footer 1</td><td>Footer 2</td></tr>
+				</tfoot>
+				<tbody>
+					<tr><td>Row 1 Col 1</td><td>Row 1 Col 2</td></tr>
+					<tr><td>Row 2 Col 1</td><td>Row 2 Col 2</td></tr>
+				</tbody>
+			</table>`,
+			`+-------------+-------------+
+|  HEADER 1   |  HEADER 2   |
++-------------+-------------+
+| Row 1 Col 1 | Row 1 Col 2 |
+| Row 2 Col 1 | Row 2 Col 2 |
++-------------+-------------+
+|  FOOTER 1   |  FOOTER 2   |
++-------------+-------------+`,
+			"Header 1 Header 2 Footer 1 Footer 2 Row 1 Col 1 Row 1 Col 2 Row 2 Col 1 Row 2 Col 2",
+		},
+		// Two tables in same HTML (goal is to test that context is
+		// reinitialized correctly).
+		{
+			`<p>
+				<table>
+					<thead>
+						<tr><th>Table 1 Header 1</th><th>Table 1 Header 2</th></tr>
+					</thead>
+					<tfoot>
+						<tr><td>Table 1 Footer 1</td><td>Table 1 Footer 2</td></tr>
+					</tfoot>
+					<tbody>
+						<tr><td>Table 1 Row 1 Col 1</td><td>Table 1 Row 1 Col 2</td></tr>
+						<tr><td>Table 1 Row 2 Col 1</td><td>Table 1 Row 2 Col 2</td></tr>
+					</tbody>
+				</table>
+				<table>
+					<thead>
+						<tr><th>Table 2 Header 1</th><th>Table 2 Header 2</th></tr>
+					</thead>
+					<tfoot>
+						<tr><td>Table 2 Footer 1</td><td>Table 2 Footer 2</td></tr>
+					</tfoot>
+					<tbody>
+						<tr><td>Table 2 Row 1 Col 1</td><td>Table 2 Row 1 Col 2</td></tr>
+						<tr><td>Table 2 Row 2 Col 1</td><td>Table 2 Row 2 Col 2</td></tr>
+					</tbody>
+				</table>
+			</p>`,
+			`+---------------------+---------------------+
+|  TABLE 1 HEADER 1   |  TABLE 1 HEADER 2   |
++---------------------+---------------------+
+| Table 1 Row 1 Col 1 | Table 1 Row 1 Col 2 |
+| Table 1 Row 2 Col 1 | Table 1 Row 2 Col 2 |
++---------------------+---------------------+
+|  TABLE 1 FOOTER 1   |  TABLE 1 FOOTER 2   |
++---------------------+---------------------+
+
++---------------------+---------------------+
+|  TABLE 2 HEADER 1   |  TABLE 2 HEADER 2   |
++---------------------+---------------------+
+| Table 2 Row 1 Col 1 | Table 2 Row 1 Col 2 |
+| Table 2 Row 2 Col 1 | Table 2 Row 2 Col 2 |
++---------------------+---------------------+
+|  TABLE 2 FOOTER 1   |  TABLE 2 FOOTER 2   |
++---------------------+---------------------+`,
+			`Table 1 Header 1 Table 1 Header 2 Table 1 Footer 1 Table 1 Footer 2 Table 1 Row 1 Col 1 Table 1 Row 1 Col 2 Table 1 Row 2 Col 1 Table 1 Row 2 Col 2
+
+Table 2 Header 1 Table 2 Header 2 Table 2 Footer 1 Table 2 Footer 2 Table 2 Row 1 Col 1 Table 2 Row 1 Col 2 Table 2 Row 2 Col 1 Table 2 Row 2 Col 2`,
 		},
 		{
 			"_<table><tr><td>cell</td></tr></table>_",
+			"_\n\n+------+\n| cell |\n+------+\n\n_",
 			"_\n\ncell\n\n_",
+		},
+		{
+			`<table>
+				<tr>
+					<th>Item</th>
+					<th>Description</th>
+					<th>Price</th>
+				</tr>
+				<tr>
+					<td>Golang</td>
+					<td>Open source programming language that makes it easy to build simple, reliable, and efficient software</td>
+					<td>$10.99</td>
+				</tr>
+				<tr>
+					<td>Hermes</td>
+					<td>Programmatically create beautiful e-mails using Golang.</td>
+					<td>$1.99</td>
+				</tr>
+			</table>`,
+			`+--------+--------------------------------+--------+
+|  ITEM  |          DESCRIPTION           | PRICE  |
++--------+--------------------------------+--------+
+| Golang | Open source programming        | $10.99 |
+|        | language that makes it easy    |        |
+|        | to build simple, reliable, and |        |
+|        | efficient software             |        |
+| Hermes | Programmatically create        | $1.99  |
+|        | beautiful e-mails using        |        |
+|        | Golang.                        |        |
++--------+--------------------------------+--------+`,
+			"Item Description Price Golang Open source programming language that makes it easy to build simple, reliable, and efficient software $10.99 Hermes Programmatically create beautiful e-mails using Golang. $1.99",
 		},
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		options := Options{
+			PrettyTables: true,
+		}
+		// Check pretty tabular ASCII version.
+		if msg, err := wantString(testCase.input, testCase.tabularOutput, options); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
+
+		// Check plain version.
+		if msg, err := wantString(testCase.input, testCase.plaintextOutput); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 }
 
@@ -145,7 +376,11 @@ func TestStrippingLists(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		if msg, err := wantString(testCase.input, testCase.output); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 }
 
@@ -222,10 +457,66 @@ func TestLinks(t *testing.T) {
 			"<p>This is <a href=\"http://www.google.com\" >link1</a> and <a href=\"http://www.google.com\" >link2 </a> is next.</p>",
 			`This is link1 ( http://www.google.com ) and link2 ( http://www.google.com ) is next.`,
 		},
+		{
+			"<a href=\"http://www.google.com\" >http://www.google.com</a>",
+			`http://www.google.com`,
+		},
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		if msg, err := wantString(testCase.input, testCase.output); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
+	}
+}
+
+func TestOmitLinks(t *testing.T) {
+	testCases := []struct {
+		input  string
+		output string
+	}{
+		{
+			`<a></a>`,
+			``,
+		},
+		{
+			`<a href=""></a>`,
+			``,
+		},
+		{
+			`<a href="http://example.com/"></a>`,
+			``,
+		},
+		{
+			`<a href="">Link</a>`,
+			`Link`,
+		},
+		{
+			`<a href="http://example.com/">Link</a>`,
+			`Link`,
+		},
+		{
+			`<a href="http://example.com/"><span class="a">Link</span></a>`,
+			`Link`,
+		},
+		{
+			"<a href='http://example.com/'>\n\t<span class='a'>Link</span>\n\t</a>",
+			`Link`,
+		},
+		{
+			`<a href="http://example.com/"><img src="http://example.ru/hello.jpg" alt="Example"></a>`,
+			`Example`,
+		},
+	}
+
+	for _, testCase := range testCases {
+		if msg, err := wantString(testCase.input, testCase.output, Options{OmitLinks: true}); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 }
 
@@ -250,7 +541,7 @@ func TestImageAltTags(t *testing.T) {
 			`<img src="http://example.ru/hello.jpg" alt="Example"/>`,
 			``,
 		},
-		// Images do matter if they are in a link
+		// Images do matter if they are in a link.
 		{
 			`<a href="http://example.com/"><img src="http://example.ru/hello.jpg" alt="Example"/></a>`,
 			`Example ( http://example.com/ )`,
@@ -270,7 +561,11 @@ func TestImageAltTags(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		if msg, err := wantString(testCase.input, testCase.output); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 }
 
@@ -310,7 +605,11 @@ func TestHeadings(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		if msg, err := wantString(testCase.input, testCase.output); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 
 }
@@ -339,7 +638,11 @@ func TestBold(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		if msg, err := wantString(testCase.input, testCase.output); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 
 }
@@ -368,7 +671,11 @@ func TestDiv(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		if msg, err := wantString(testCase.input, testCase.output); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 
 }
@@ -409,7 +716,11 @@ func TestBlockquotes(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		if msg, err := wantString(testCase.input, testCase.output); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 
 }
@@ -462,7 +773,11 @@ func TestIgnoreStylesScriptsHead(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		assertString(t, testCase.input, testCase.output)
+		if msg, err := wantString(testCase.input, testCase.output); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 }
 
@@ -481,7 +796,7 @@ func TestText(t *testing.T) {
 			`hi
 
 			<br>
-	
+
 	hello <a href="https://google.com">google</a>
 	<br><br>
 	test<p>List:</p>
@@ -529,7 +844,35 @@ List:
 	}
 
 	for _, testCase := range testCases {
-		assertRegexp(t, testCase.input, testCase.expr)
+		if msg, err := wantRegExp(testCase.input, testCase.expr); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
+	}
+}
+
+func TestPeriod(t *testing.T) {
+	testCases := []struct {
+		input string
+		expr  string
+	}{
+		{
+			`<p>Lorem ipsum <span>test</span>.</p>`,
+			`Lorem ipsum test\.`,
+		},
+		{
+			`<p>Lorem ipsum <span>test.</span></p>`,
+			`Lorem ipsum test\.`,
+		},
+	}
+
+	for _, testCase := range testCases {
+		if msg, err := wantRegExp(testCase.input, testCase.expr); err != nil {
+			t.Error(err)
+		} else if len(msg) > 0 {
+			t.Log(msg)
+		}
 	}
 }
 
@@ -556,67 +899,110 @@ func (m ExactStringMatcher) String() string {
 	return string(m)
 }
 
-func assertRegexp(t *testing.T, input string, outputRE string) {
-	assertPlaintext(t, input, RegexpStringMatcher(outputRE))
+func wantRegExp(input string, outputRE string, options ...Options) (string, error) {
+	return match(input, RegexpStringMatcher(outputRE), options...)
 }
 
-func assertString(t *testing.T, input string, output string) {
-	assertPlaintext(t, input, ExactStringMatcher(output))
+func wantString(input string, output string, options ...Options) (string, error) {
+	return match(input, ExactStringMatcher(output), options...)
 }
 
-func assertPlaintext(t *testing.T, input string, matcher StringMatcher) {
-	text, err := FromString(input)
+func match(input string, matcher StringMatcher, options ...Options) (string, error) {
+	text, err := FromString(input, options...)
 	if err != nil {
-		t.Error(err)
+		return "", err
 	}
 	if !matcher.MatchString(text) {
-		t.Errorf("Input did not match expression\n"+
-			"Input:\n>>>>\n%s\n<<<<\n\n"+
-			"Output:\n>>>>\n%s\n<<<<\n\n"+
-			"Expected output:\n>>>>\n%s\n<<<<\n\n",
-			input, text, matcher.String())
-	} else {
-		t.Logf("input:\n\n%s\n\n\n\noutput:\n\n%s\n", input, text)
+		return "", fmt.Errorf(`error: input did not match specified expression
+Input:
+>>>>
+%v
+<<<<
+
+Output:
+>>>>
+%v
+<<<<
+
+Expected:
+>>>>
+%v
+<<<<`,
+			input,
+			text,
+			matcher.String(),
+		)
 	}
+
+	var msg string
+
+	if EnableExtraLogging {
+		msg = fmt.Sprintf(
+			`
+input:
+
+%v
+
+output:
+
+%v
+`,
+			input,
+			text,
+		)
+	}
+	return msg, nil
 }
 
 func Example() {
-	inputHtml := `
-	  <html>
-		<head>
-		  <title>My Mega Service</title>
-		  <link rel=\"stylesheet\" href=\"main.css\">
-		  <style type=\"text/css\">body { color: #fff; }</style>
-		</head>
+	inputHTML := `
+<html>
+	<head>
+		<title>My Mega Service</title>
+		<link rel=\"stylesheet\" href=\"main.css\">
+		<style type=\"text/css\">body { color: #fff; }</style>
+	</head>
 
-		<body>
-		  <div class="logo">
-			<a href="http://mymegaservice.com/"><img src="/logo-image.jpg" alt="Mega Service"/></a>
-		  </div>
+	<body>
+		<div class="logo">
+			<a href="http://jaytaylor.com/"><img src="/logo-image.jpg" alt="Mega Service"/></a>
+		</div>
 
-		  <h1>Welcome to your new account on my service!</h1>
+		<h1>Welcome to your new account on my service!</h1>
 
-		  <p>
-			  Here is some more information:
+		<p>
+			Here is some more information:
 
-			  <ul>
-				  <li>Link 1: <a href="https://example.com">Example.com</a></li>
-				  <li>Link 2: <a href="https://example2.com">Example2.com</a></li>
-				  <li>Something else</li>
-			  </ul>
-		  </p>
-		</body>
-	  </html>
-	`
+			<ul>
+				<li>Link 1: <a href="https://example.com">Example.com</a></li>
+				<li>Link 2: <a href="https://example2.com">Example2.com</a></li>
+				<li>Something else</li>
+			</ul>
+		</p>
 
-	text, err := FromString(inputHtml)
+		<table>
+			<thead>
+				<tr><th>Header 1</th><th>Header 2</th></tr>
+			</thead>
+			<tfoot>
+				<tr><td>Footer 1</td><td>Footer 2</td></tr>
+			</tfoot>
+			<tbody>
+				<tr><td>Row 1 Col 1</td><td>Row 1 Col 2</td></tr>
+				<tr><td>Row 2 Col 1</td><td>Row 2 Col 2</td></tr>
+			</tbody>
+		</table>
+	</body>
+</html>`
+
+	text, err := FromString(inputHTML, Options{PrettyTables: true})
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(text)
 
 	// Output:
-	// Mega Service ( http://mymegaservice.com/ )
+	// Mega Service ( http://jaytaylor.com/ )
 	//
 	// ******************************************
 	// Welcome to your new account on my service!
@@ -627,4 +1013,13 @@ func Example() {
 	// * Link 1: Example.com ( https://example.com )
 	// * Link 2: Example2.com ( https://example2.com )
 	// * Something else
+	//
+	// +-------------+-------------+
+	// |  HEADER 1   |  HEADER 2   |
+	// +-------------+-------------+
+	// | Row 1 Col 1 | Row 1 Col 2 |
+	// | Row 2 Col 1 | Row 2 Col 2 |
+	// +-------------+-------------+
+	// |  FOOTER 1   |  FOOTER 2   |
+	// +-------------+-------------+
 }

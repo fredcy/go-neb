@@ -22,6 +22,7 @@ import (
 	_ "github.com/matrix-org/go-neb/services/alertmanager"
 	_ "github.com/matrix-org/go-neb/services/echo"
 	_ "github.com/matrix-org/go-neb/services/giphy"
+	_ "github.com/matrix-org/go-neb/services/giphy2"	
 	_ "github.com/matrix-org/go-neb/services/github"
 	_ "github.com/matrix-org/go-neb/services/google"
 	_ "github.com/matrix-org/go-neb/services/guggy"

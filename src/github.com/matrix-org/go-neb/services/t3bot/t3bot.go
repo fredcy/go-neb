@@ -19,13 +19,31 @@ type Service struct {
 	types.DefaultService
 }
 
-var topicMessage = "This would be the <i>topic</i> message."
+var roomsMessage = `
+Tezos General Chat: #tezos:matrix.org
+Tezos Price Chat: #tezostrader:matrix.org
+Tezos Media Chat: #tezosmedia:matrix.org
+Tezos Governance Chat: #tezosgovernance:matrix.org
+Tezos Ideas and Collaboration Chat: #tezosfoundry:matrix.org
+Tezos IRC Tech Chat: #freenode_#tezos:matrix.org
+Tezos Random Chat: #tezosrandom:matrix.org
+`
 
-var topicHTMLMessage = gomatrix.HTMLMessage{
+var roomsMessageHTML = `
+Tezos General Chat: <a href="https://riot.im/app/#/room/#tezos:matrix.org">#tezos:matrix.org</a><br>
+Tezos Price Chat: <a href="https://riot.im/app/#/room/#tezostrader:matrix.org">#tezostrader:matrix.org</a><br>
+Tezos Media Chat: <a href="https://riot.im/app/#/room/#tezosmedia:matrix.org">#tezosmedia:matrix.org</a><br>
+Tezos Governance Chat: <a href="https://riot.im/app/#/room/#tezosgovernance:matrix.org">#tezosgoverance:matrix.org</a><br>
+Tezos Ideas and Collaboration Chat: <a href="https://riot.im/app/#/room/#tezosfoundry:matrix.org">#tezosfoundry:matrix.org</a><br>
+Tezos IRC Tech Chat: <a href="https://riot.im/app/#/room/#freenode_#tezos:matrix.org">#freenode_#tezos:matrix.org</a><br>
+Tezos Random Chat: <a href="https://riot.im/app/#/room/#tezosrandom:matrix.org">#tezosrandom:matrix.org</a>
+`
+
+var roomsHTMLMessage = gomatrix.HTMLMessage{
 	MsgType:       "m.notice",
-	Body:          "This would be the topic message.",
+	Body:          roomsMessage,
 	Format:        "org.matrix.custom.html",
-	FormattedBody: "This would be the <strong>topic message</strong>.",
+	FormattedBody: roomsMessageHTML,
 }
 
 // Commands supported:
@@ -40,18 +58,18 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 			},
 		},
 		types.Command{
-			Path: []string{"topic"},
+			Path: []string{"rooms"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				//return &gomatrix.TextMessage{"m.notice", topicMessage}, nil
-				return topicHTMLMessage, nil
+				return roomsHTMLMessage, nil
 			},
 		},
 	}
 }
 
-// Match message with bad words. Constuct pattern that it matches only
-// once per message so that respond only once.
-var badwordsRegex = regexp.MustCompile(`(?i:^.*\b(gevers|rumplestiltskin)\b.*$)`)
+// Match message with bad words. Constuct pattern that it matches only once per
+// message so that it responds only once. Otherwise it seems to respond once per
+// match.
+var badwordsRegex = regexp.MustCompile(`(?i:^.*\b(gevers|guido|tzlibre)\b.*$)`)
 
 var badwordsExpand = types.Expansion{
 	Regexp: badwordsRegex,
@@ -60,7 +78,7 @@ var badwordsExpand = types.Expansion{
 		log.WithFields(log.Fields{"room_id": roomID, "user_id": userID, "matches": matches}).Print("badwords matched")
 		return &gomatrix.TextMessage{
 			"m.notice",
-			fmt.Sprintf("%s used bad words", userID),
+			fmt.Sprintf("%s used a bad word", userID),
 		}
 	},
 }

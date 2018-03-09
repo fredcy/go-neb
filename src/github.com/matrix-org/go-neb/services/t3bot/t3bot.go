@@ -15,6 +15,7 @@ import (
 	"github.com/jaytaylor/html2text"
 	"github.com/matrix-org/go-neb/types"
 	"github.com/matrix-org/gomatrix"
+	"github.com/shopspring/decimal"
 )
 
 // ServiceType of the T3bot service
@@ -257,7 +258,7 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 <th>24H</th>
 <th>7D</th>
 <th>Rank</th>
-<th>Mkt Cap (USD)</th>
+<th>Mkt Cap (M USD)</th>
 </tr></thead>`
 
 	rowFormat := `<tr>
@@ -271,9 +272,17 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 </tr>`
 
 	tbody := `<tbody>`
+	millionD, _ := decimal.NewFromString("1000000")
 	for _, ticker := range *tickers {
+		capD, err := decimal.NewFromString(ticker.CapUSD)
+		if err != nil {
+			log.WithFields(log.Fields{"s": ticker.CapUSD, "err": err}).Error("failed conversion to decimal")
+			continue
+		}
+
 		tbody += fmt.Sprintf(rowFormat, ticker.Symbol, ticker.PriceUSD,
-			ticker.Pct1H, ticker.Pct24H, ticker.Pct7D, ticker.Rank, ticker.CapUSD)
+			ticker.Pct1H, ticker.Pct24H, ticker.Pct7D, ticker.Rank,
+			capD.Div(millionD).Round(0).String())
 	}
 	tbody += `</tbody>`
 	table := `<table>` + thead + tbody + `</table>`

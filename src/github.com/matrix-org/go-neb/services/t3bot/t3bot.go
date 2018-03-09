@@ -273,16 +273,19 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 
 	tbody := `<tbody>`
 	millionD, _ := decimal.NewFromString("1000000")
+	var capS string
 	for _, ticker := range *tickers {
 		capD, err := decimal.NewFromString(ticker.CapUSD)
 		if err != nil {
 			log.WithFields(log.Fields{"s": ticker.CapUSD, "err": err}).Error("failed conversion to decimal")
-			continue
+			capS = "?"
+		} else {
+			capS = capD.Div(millionD).Round(0).String()
 		}
 
 		tbody += fmt.Sprintf(rowFormat, ticker.Symbol, ticker.PriceUSD,
 			ticker.Pct1H, ticker.Pct24H, ticker.Pct7D, ticker.Rank,
-			capD.Div(millionD).Round(0).String())
+			capS)
 	}
 	tbody += `</tbody>`
 	table := `<table>` + thead + tbody + `</table>`

@@ -159,15 +159,18 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 		return nil, err // TODO hide from user
 	}
 
-	//fake := fmt.Sprintf("%v", tickers)
-	textMessage := fmt.Sprintf("%s (%s): $%s  rank=%s 1h=%s%%",
-		tickers[0].Symbol, tickers[0].Id, tickers[0].PriceUSD,
-		tickers[0].Rank, tickers[0].Pct1H)
-
-	thead := `<thead><tr><th>symbol</th><th>Price USD</th></tr></thead>`
+	thead := `<thead><tr>
+<th>symbol</th>
+<th>Price USD</th>
+<th>Pct 1H</th>
+<th>Pct 24H</th>
+<th>Pct 7D</th>
+<th>Rank</th>
+</tr></thead>`
 	tbody := `<tbody>`
-	for ticker := range tickers {
-		tbody += fmt.Sprintf(`<tr><td>%s</td><td>%s</td></tr>`, ticker.Symbol, ticker.PriceUSD)
+	for _, ticker := range tickers {
+		tbody += fmt.Sprintf(`<tr><td>%s</td><td>%s</td><td>%s%%</td><td>%s%%</td><td>%s%%</td><td>%s</td></tr>`,
+			ticker.Symbol, ticker.PriceUSD, ticker.Pct1H, ticker.Pct24H, ticker.Pct7D, ticker.Rank)
 	}
 	tbody += `</tbody>`
 	table := `<table>` + thead + tbody + `</table>`
@@ -184,7 +187,6 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 		Body:          tableText,
 	}
 
-	//message := gomatrix.TextMessage{"m.notice", textMessage}
 	return &htmlMessage, nil
 }
 

@@ -126,7 +126,7 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 	}
 }
 
-type cmcTickerResponse struct {
+type cmcTicker struct {
 	Id       string `json:"id"`
 	Name     string `json:"name"`
 	Symbol   string `json:"symbol"`
@@ -137,10 +137,10 @@ type cmcTickerResponse struct {
 	Pct7D    string `json:"percent_change_7d"`
 }
 
-var allTickers []cmcTickerResponse
+var allTickers []cmcTicker
 
 func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
-	var tickers []cmcTickerResponse
+	var tickers []cmcTicker
 
 	if len(allTickers) == 0 {
 		allTickersNew, err := getAllTickers()
@@ -162,7 +162,7 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 		}
 		//log.WithFields(log.Fields{"response": string(*response)}).Info("CMC response")
 
-		var ts []cmcTickerResponse
+		var ts []cmcTicker
 		err2 := json.Unmarshal(*response, &ts)
 		if err2 != nil {
 			return nil, err // TODO hide from user
@@ -172,16 +172,25 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 
 	thead := `<thead><tr>
 <th>symbol</th>
-<th>Price USD</th>
-<th>Pct 1H</th>
-<th>Pct 24H</th>
-<th>Pct 7D</th>
+<th>Latest (USD)</th>
+<th>1H</th>
+<th>24H</th>
+<th>7D</th>
 <th>Rank</th>
 </tr></thead>`
+
+	rowFormat := `<tr>
+<td>%s</td>
+<td>%s</td>
+<td>%s%%</td>
+<td>%s%%</td>
+<td>%s%%</td>
+<td>%s</td>
+</tr>`
+
 	tbody := `<tbody>`
 	for _, ticker := range tickers {
-		tbody += fmt.Sprintf(`<tr><td>%s</td><td>%s</td><td>%s%%</td><td>%s%%</td><td>%s%%</td><td>%s</td></tr>`,
-			ticker.Symbol, ticker.PriceUSD, ticker.Pct1H, ticker.Pct24H, ticker.Pct7D, ticker.Rank)
+		tbody += fmt.Sprintf(rowFormat, ticker.Symbol, ticker.PriceUSD, ticker.Pct1H, ticker.Pct24H, ticker.Pct7D, ticker.Rank)
 	}
 	tbody += `</tbody>`
 	table := `<table>` + thead + tbody + `</table>`
@@ -201,22 +210,25 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 	return &htmlMessage, nil
 }
 
-func getAllTickers() (*[]cmcTickerResponse, error) {
-	log.Info("getAllTickers")
-	tickerBytes, err := queryCMC("")
+func getAllTickers() (*[]cmcTicker, error) {
+	tickerBytes, err := queryCMC("?limit=0")
 	if err != nil {
 		return nil, err
 	}
 
-	var tickers []cmcTickerResponse
+	var tickers []cmcTicker
 	err2 := json.Unmarshal(*tickerBytes, &tickers)
 	if err2 != nil {
 		return nil, err2
 	}
+	log.WithFields(log.Fields{"len": len(tickers)}).Info("getAllTickers")
 	return &tickers, nil
 }
 
-func findCoinID(arg string, tickers *[]cmcTickerResponse) (string, error) {
+// findCoin takes a user-supplied coin name and tries to find the canonical CMC
+// id for it (as needed for queries to their API), referencing an array of
+// ticker info that gives the Id, Name, and Symbol for a set coin types.
+func findCoinID(arg string, tickers *[]cmcTicker) (string, error) {
 	target := strings.ToLower(arg)
 	for _, t := range *tickers {
 		if target == strings.ToLower(t.Symbol) || target == strings.ToLower(t.Id) || target == strings.ToLower(t.Name) {
@@ -228,7 +240,7 @@ func findCoinID(arg string, tickers *[]cmcTickerResponse) (string, error) {
 }
 
 func queryCMC(query string) (*[]byte, error) {
-	log.Info("querying CMC for ", query)
+	log.WithFields(log.Fields{"query": query}).Info("queryCMC")
 
 	url := "https://api.coinmarketcap.com/v1/ticker/" + query
 	resp, err := http.Get(url)

@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -46,6 +47,16 @@ func init() {
 		panic(err)
 	}
 	roomsHTMLMessage.Body = text
+}
+
+func simpleMessage(message string) *gomatrix.HTMLMessage {
+	msg := gomatrix.HTMLMessage{
+		MsgType:       "m.notice",
+		Format:        "org.matrix.custom.html",
+		FormattedBody: message,
+		Body:          message,
+	}
+	return &msg
 }
 
 // Commands supported:
@@ -118,6 +129,13 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		},
 
 		types.Command{
+			Path: []string{"top"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return e.cmdTop(cli, roomID, userID, args)
+			},
+		},
+
+		types.Command{
 			Path: []string{"mom-am-i-rich-yet"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return &gomatrix.TextMessage{"m.notice", "Not yet, dear boy. Go back to work."}, nil
@@ -135,6 +153,7 @@ type cmcTicker struct {
 	Pct1H    string `json:"percent_change_1h"`
 	Pct24H   string `json:"percent_change_24h"`
 	Pct7D    string `json:"percent_change_7d"`
+	CapUSD   string `json:"market_cap_usd"`
 }
 
 var allTickers []cmcTicker
@@ -160,7 +179,7 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 		if err != nil {
 			return nil, err
 		}
-		//log.WithFields(log.Fields{"response": string(*response)}).Info("CMC response")
+		log.WithFields(log.Fields{"response": string(*response)}).Info("CMC response")
 
 		var ts []cmcTicker
 		err2 := json.Unmarshal(*response, &ts)
@@ -170,44 +189,7 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 		tickers = append(tickers, ts...)
 	}
 
-	thead := `<thead><tr>
-<th>symbol</th>
-<th>Latest (USD)</th>
-<th>1H</th>
-<th>24H</th>
-<th>7D</th>
-<th>Rank</th>
-</tr></thead>`
-
-	rowFormat := `<tr>
-<td>%s</td>
-<td>%s</td>
-<td>%s%%</td>
-<td>%s%%</td>
-<td>%s%%</td>
-<td>%s</td>
-</tr>`
-
-	tbody := `<tbody>`
-	for _, ticker := range tickers {
-		tbody += fmt.Sprintf(rowFormat, ticker.Symbol, ticker.PriceUSD, ticker.Pct1H, ticker.Pct24H, ticker.Pct7D, ticker.Rank)
-	}
-	tbody += `</tbody>`
-	table := `<table>` + thead + tbody + `</table>`
-
-	tableText, err3 := html2text.FromString(table)
-	if err3 != nil {
-		return nil, err3
-	}
-
-	htmlMessage := gomatrix.HTMLMessage{
-		MsgType:       "m.notice",
-		Format:        "org.matrix.custom.html",
-		FormattedBody: table,
-		Body:          tableText,
-	}
-
-	return &htmlMessage, nil
+	return displayTickers(&tickers)
 }
 
 func getAllTickers() (*[]cmcTicker, error) {
@@ -237,6 +219,78 @@ func findCoinID(arg string, tickers *[]cmcTicker) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("coin name '%s' not found", arg)
+}
+
+func (s *Service) cmdTop(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
+	limit := 5
+	if len(args) > 0 {
+		lim, err := strconv.Atoi(args[0])
+		if err == nil {
+			limit = lim
+		}
+	}
+
+	if limit > 10 {
+		return simpleMessage("Yeah, that would spam the room. Try 10 or less."), nil
+	}
+
+	query := fmt.Sprintf("?limit=%d", limit)
+	response, err := queryCMC(query)
+	if err != nil {
+		return nil, err
+	}
+
+	var ts []cmcTicker
+	err2 := json.Unmarshal(*response, &ts)
+	if err2 != nil {
+		return nil, err
+	}
+
+	return displayTickers(&ts)
+}
+
+func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
+	thead := `<thead><tr>
+<th>symbol</th>
+<th>Latest (USD)</th>
+<th>1H</th>
+<th>24H</th>
+<th>7D</th>
+<th>Rank</th>
+<th>Mkt Cap (USD)</th>
+</tr></thead>`
+
+	rowFormat := `<tr>
+<td>%s</td>
+<td>%s</td>
+<td>%s%%</td>
+<td>%s%%</td>
+<td>%s%%</td>
+<td>%s</td>
+<td>%s</td>
+</tr>`
+
+	tbody := `<tbody>`
+	for _, ticker := range *tickers {
+		tbody += fmt.Sprintf(rowFormat, ticker.Symbol, ticker.PriceUSD,
+			ticker.Pct1H, ticker.Pct24H, ticker.Pct7D, ticker.Rank, ticker.CapUSD)
+	}
+	tbody += `</tbody>`
+	table := `<table>` + thead + tbody + `</table>`
+
+	tableText, err3 := html2text.FromString(table)
+	if err3 != nil {
+		return nil, err3
+	}
+
+	htmlMessage := gomatrix.HTMLMessage{
+		MsgType:       "m.notice",
+		Format:        "org.matrix.custom.html",
+		FormattedBody: table,
+		Body:          tableText,
+	}
+
+	return &htmlMessage, nil
 }
 
 func queryCMC(query string) (*[]byte, error) {

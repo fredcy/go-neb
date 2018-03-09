@@ -137,26 +137,37 @@ type cmcTickerResponse struct {
 	Pct7D    string `json:"percent_change_7d"`
 }
 
+var allTickers []cmcTickerResponse
+
 func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
-	var coinID string
-	if len(args) == 0 {
-		coinID = "bitcoin"
-	} else if len(args) == 1 {
-		coinID = args[0]
-	} else {
-		coinID = args[0] // TODO: handle more?
-	}
-
-	response, err := queryCMC(coinID + "/")
-	if err != nil {
-		return nil, err
-	}
-	log.WithFields(log.Fields{"response": string(*response)}).Info("CMC response")
-
 	var tickers []cmcTickerResponse
-	err2 := json.Unmarshal(*response, &tickers)
-	if err2 != nil {
-		return nil, err // TODO hide from user
+
+	if len(allTickers) == 0 {
+		allTickersNew, err := getAllTickers()
+		if err != nil {
+			return nil, err
+		}
+		allTickers = *allTickersNew
+	}
+
+	for _, arg := range args {
+		coinID, err := findCoinID(arg, &allTickers)
+		if err != nil {
+			return nil, err // TODO handle gradefully
+		}
+
+		response, err := queryCMC(coinID + "/")
+		if err != nil {
+			return nil, err
+		}
+		//log.WithFields(log.Fields{"response": string(*response)}).Info("CMC response")
+
+		var ts []cmcTickerResponse
+		err2 := json.Unmarshal(*response, &ts)
+		if err2 != nil {
+			return nil, err // TODO hide from user
+		}
+		tickers = append(tickers, ts...)
 	}
 
 	thead := `<thead><tr>
@@ -188,6 +199,32 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 	}
 
 	return &htmlMessage, nil
+}
+
+func getAllTickers() (*[]cmcTickerResponse, error) {
+	log.Info("getAllTickers")
+	tickerBytes, err := queryCMC("")
+	if err != nil {
+		return nil, err
+	}
+
+	var tickers []cmcTickerResponse
+	err2 := json.Unmarshal(*tickerBytes, &tickers)
+	if err2 != nil {
+		return nil, err2
+	}
+	return &tickers, nil
+}
+
+func findCoinID(arg string, tickers *[]cmcTickerResponse) (string, error) {
+	target := strings.ToLower(arg)
+	for _, t := range *tickers {
+		if target == strings.ToLower(t.Symbol) || target == strings.ToLower(t.Id) || target == strings.ToLower(t.Name) {
+			log.WithFields(log.Fields{"arg": arg, "return": t.Id}).Info("findCoinID")
+			return t.Id, nil
+		}
+	}
+	return "", fmt.Errorf("coin name '%s' not found", arg)
 }
 
 func queryCMC(query string) (*[]byte, error) {

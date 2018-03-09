@@ -137,7 +137,7 @@ type cmcTickerResponse struct {
 	Pct7D    string `json:"percent_change_7d"`
 }
 
-func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.TextMessage, error) {
+func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
 	var coinID string
 	if len(args) == 0 {
 		coinID = "bitcoin"
@@ -164,8 +164,28 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 		tickers[0].Symbol, tickers[0].Id, tickers[0].PriceUSD,
 		tickers[0].Rank, tickers[0].Pct1H)
 
-	message := gomatrix.TextMessage{"m.notice", textMessage}
-	return &message, nil
+	thead := `<thead><tr><th>symbol</th><th>Price USD</th></tr></thead>`
+	tbody := `<tbody>`
+	for ticker := range tickers {
+		tbody += fmt.Sprintf(`<tr><td>%s</td><td>%s</td></tr>`, ticker.Symbol, ticker.PriceUSD)
+	}
+	tbody += `</tbody>`
+	table := `<table>` + thead + tbody + `</table>`
+
+	tableText, err3 := html2text.FromString(table)
+	if err3 != nil {
+		return nil, err3
+	}
+
+	htmlMessage := gomatrix.HTMLMessage{
+		MsgType:       "m.notice",
+		Format:        "org.matrix.custom.html",
+		FormattedBody: table,
+		Body:          tableText,
+	}
+
+	//message := gomatrix.TextMessage{"m.notice", textMessage}
+	return &htmlMessage, nil
 }
 
 func queryCMC(query string) (*[]byte, error) {

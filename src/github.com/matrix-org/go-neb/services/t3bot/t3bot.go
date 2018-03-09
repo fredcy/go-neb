@@ -254,7 +254,7 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 	thead := `<thead><tr>
 <th>symbol</th>
 <th>Latest (USD)</th>
-<th>1H</th>
+<th>1H %Δ</th>
 <th>24H</th>
 <th>7D</th>
 <th>Rank</th>
@@ -264,7 +264,7 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 	rowFormat := `<tr>
 <td>%s</td>
 <td>%s</td>
-<td>%s%%</td>
+<td>%s</td>
 <td>%s%%</td>
 <td>%s%%</td>
 <td>%s</td>

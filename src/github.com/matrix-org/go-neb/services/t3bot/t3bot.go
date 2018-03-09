@@ -93,7 +93,34 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 				}
 			},
 		},
+		types.Command{
+			Path: []string{"iou"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				query := "ticker/XTZUSD"
+				response, err := e.cmdHitBTC(cli, roomID, userID, query)
+				if err != nil {
+					return nil, err
+				} else {
+					var t ticker
+					err2 := json.Unmarshal(*response, &t)
+					if err2 != nil {
+						return nil, err
+					}
+					return &gomatrix.TextMessage{"m.notice", t.Last + " $/ꜩ"}, nil
+				}
+			},
+		},
+		types.Command{
+			Path: []string{"mom-am-i-rich-yet"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return &gomatrix.TextMessage{"m.notice", "Not yet, dear boy. Go back to work."}, nil
+			},
+		},
 	}
+}
+
+type ticker struct {
+	Last string `json:"last"`
 }
 
 func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID, query string) (*[]byte, error) {

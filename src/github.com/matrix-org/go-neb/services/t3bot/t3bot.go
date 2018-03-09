@@ -127,9 +127,14 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 }
 
 type cmcTickerResponse struct {
+	Id       string `json:"id"`
+	Name     string `json:"name"`
 	Symbol   string `json:"symbol"`
 	PriceUSD string `json:"price_usd"`
 	Rank     string `json:"rank"`
+	Pct1H    string `json:"percent_change_1h"`
+	Pct24H   string `json:"percent_change_24h"`
+	Pct7D    string `json:"percent_change_7d"`
 }
 
 func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.TextMessage, error) {
@@ -146,8 +151,20 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 	if err != nil {
 		return nil, err
 	}
+	log.WithFields(log.Fields{"response": string(*response)}).Info("CMC response")
 
-	message := gomatrix.TextMessage{"m.notice", string(*response)}
+	var tickers []cmcTickerResponse
+	err2 := json.Unmarshal(*response, &tickers)
+	if err2 != nil {
+		return nil, err // TODO hide from user
+	}
+
+	//fake := fmt.Sprintf("%v", tickers)
+	textMessage := fmt.Sprintf("%s (%s): $%s  rank=%s 1h=%s%%",
+		tickers[0].Symbol, tickers[0].Id, tickers[0].PriceUSD,
+		tickers[0].Rank, tickers[0].Pct1H)
+
+	message := gomatrix.TextMessage{"m.notice", textMessage}
 	return &message, nil
 }
 

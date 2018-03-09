@@ -111,12 +111,65 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 			},
 		},
 		types.Command{
+			Path: []string{"cmc"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return e.cmdCMC(cli, roomID, userID, args)
+			},
+		},
+
+		types.Command{
 			Path: []string{"mom-am-i-rich-yet"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return &gomatrix.TextMessage{"m.notice", "Not yet, dear boy. Go back to work."}, nil
 			},
 		},
 	}
+}
+
+type cmcTickerResponse struct {
+	Symbol   string `json:"symbol"`
+	PriceUSD string `json:"price_usd"`
+	Rank     string `json:"rank"`
+}
+
+func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.TextMessage, error) {
+	var coinID string
+	if len(args) == 0 {
+		coinID = "bitcoin"
+	} else if len(args) == 1 {
+		coinID = args[0]
+	} else {
+		coinID = args[0] // TODO: handle more?
+	}
+
+	response, err := queryCMC(coinID + "/")
+	if err != nil {
+		return nil, err
+	}
+
+	message := gomatrix.TextMessage{"m.notice", string(*response)}
+	return &message, nil
+}
+
+func queryCMC(query string) (*[]byte, error) {
+	log.Info("querying CMC for ", query)
+
+	url := "https://api.coinmarketcap.com/v1/ticker/" + query
+	resp, err := http.Get(url)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("get of %s returned code %v", url, resp.StatusCode)
+	}
+	bodyBytes, err2 := ioutil.ReadAll(resp.Body)
+	if err2 != nil {
+		return nil, err2
+	}
+	return &bodyBytes, nil
 }
 
 type ticker struct {

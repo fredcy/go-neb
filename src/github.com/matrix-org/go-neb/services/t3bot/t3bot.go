@@ -180,7 +180,7 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 		if err != nil {
 			return nil, err
 		}
-		log.WithFields(log.Fields{"response": string(*response)}).Info("CMC response")
+		//log.WithFields(log.Fields{"response": string(*response)}).Info("CMC response")
 
 		var ts []cmcTicker
 		err2 := json.Unmarshal(*response, &ts)
@@ -255,8 +255,8 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 <th>symbol</th>
 <th>Latest (USD)</th>
 <th>1H %Δ</th>
-<th>24H</th>
-<th>7D</th>
+<th>24H %Δ</th>
+<th>7D %Δ</th>
 <th>Rank</th>
 <th>Mkt Cap (M USD)</th>
 </tr></thead>`
@@ -265,8 +265,8 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 <td>%s</td>
 <td>%s</td>
 <td>%s</td>
-<td>%s%%</td>
-<td>%s%%</td>
+<td>%s</td>
+<td>%s</td>
 <td>%s</td>
 <td>%s</td>
 </tr>`

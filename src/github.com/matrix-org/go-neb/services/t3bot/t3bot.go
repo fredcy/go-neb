@@ -162,6 +162,8 @@ var allTickers []cmcTicker
 func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
 	var tickers []cmcTicker
 
+	// Make sure we have data about all coins known by CMC, which findCoinID()
+	// uses to look up the canonical id for a coin given the user-entered name.
 	if len(allTickers) == 0 {
 		allTickersNew, err := getAllTickers()
 		if err != nil {
@@ -277,9 +279,10 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 	for _, ticker := range *tickers {
 		capD, err := decimal.NewFromString(ticker.CapUSD)
 		if err != nil {
-			log.WithFields(log.Fields{"s": ticker.CapUSD, "err": err}).Error("failed conversion to decimal")
+			log.WithFields(log.Fields{"s": ticker.CapUSD, "err": err}).Warn("failed conversion to decimal")
 			capS = "?"
 		} else {
+			// Calculate and display market-cap rounded to millions, using decimal type to maintain precision.
 			capS = capD.Div(millionD).Round(0).String()
 		}
 
@@ -290,7 +293,10 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 	tbody += `</tbody>`
 	table := `<table>` + thead + tbody + `</table>`
 
-	tableText, err3 := html2text.FromString(table)
+	// Convert the HTML table to text alternative format. Unfortunately, Riot
+	// clients on android and IOS ignore this and display a half-fast rendering
+	// of the HTML without any tabular layout.
+	tableText, err3 := html2text.FromString(table, html2text.Options{PrettyTables: true})
 	if err3 != nil {
 		return nil, err3
 	}
@@ -305,6 +311,8 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 	return &htmlMessage, nil
 }
 
+// queryCMC sends a ticker query to the coinmarketcap.com API and returns the
+// response bytes, which should be a JSON value for an array of ticker objects.
 func queryCMC(query string) (*[]byte, error) {
 	log.WithFields(log.Fields{"query": query}).Info("queryCMC")
 
@@ -351,9 +359,9 @@ func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID, query strin
 	return &bodyBytes, nil
 }
 
-// Match message with bad words. Constuct pattern that it matches only once per
-// message so that it responds only once. Otherwise it seems to respond once per
-// match.
+// Match message with bad words. Constuct the pattern such that it matches only
+// once per message so that it responds only once. Otherwise it seems to respond
+// once per match.
 var badwordsRegex = regexp.MustCompile(`(?i:^.*\b(gevers|guido|tzlibre)\b.*$)`)
 
 var badwordsExpand = types.Expansion{

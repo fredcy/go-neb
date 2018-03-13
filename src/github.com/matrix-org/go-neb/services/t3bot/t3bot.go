@@ -142,6 +142,26 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 				return &gomatrix.TextMessage{"m.notice", "Not yet, dear boy. Go back to work."}, nil
 			},
 		},
+
+		callAndResponse("bear", "ʕ ·(エ)· ʔ"),
+		callAndResponse("cub", `ʕ •ᴥ•ʔ`),					
+		callAndResponse("shrug", `¯\_(ツ)_/¯`),
+		callAndResponse("dealwithit", `(•_•)   ( •_•)>⌐■-■    (⌐■_■)`),
+		callAndResponse("disapprove", `ಠ_ಠ`),
+		callAndResponse("skeptical", `ಠಿ_ಠ`),
+		callAndResponse("flip", `(╯°□°）╯︵ ┻━┻`),
+		callAndResponse("moon", `┗(°0°)┛`),
+		callAndResponse("fhqwhgads", "Everybody. TO THE LIMIT."),
+	}
+}
+
+
+func callAndResponse(cmd, response string) types.Command {
+	return types.Command{
+		Path: []string{cmd},
+		Command: func(roomID, userID string, args []string) (interface{}, error) {
+			return &gomatrix.TextMessage{"m.notice", response}, nil
+		},
 	}
 }
 

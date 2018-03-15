@@ -144,7 +144,8 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		},
 
 		callAndResponse("bear", "ʕ ·(エ)· ʔ"),
-		callAndResponse("cub", `ʕ •ᴥ•ʔ`),					
+		callAndResponse("cub", `ʕ •ᴥ•ʔ`),
+		callAndResponse("koala", `ʕ •ᴥ•ʔ`),					
 		callAndResponse("shrug", `¯\_(ツ)_/¯`),
 		callAndResponse("dealwithit", `(•_•)   ( •_•)>⌐■-■    (⌐■_■)`),
 		callAndResponse("disapprove", `ಠ_ಠ`),

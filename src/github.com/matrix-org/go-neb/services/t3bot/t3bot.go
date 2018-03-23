@@ -132,7 +132,14 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		types.Command{
 			Path: []string{"top"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				return e.cmdTop(cli, roomID, userID, args)
+				return e.cmdTop(cli, roomID, userID, 10, args)
+			},
+		},
+
+		types.Command{
+			Path: []string{"toƿ"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return e.cmdTop(cli, roomID, userID, 100, args)
 			},
 		},
 
@@ -144,8 +151,12 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		},
 
 		callAndResponse("bear", "ʕ ·(エ)· ʔ"),
+		callAndResponse("bull", `ᓷ( ఠൠఠ )ᓸ`),
 		callAndResponse("cub", `ʕ •ᴥ•ʔ`),
 		callAndResponse("koala", `ʕ •ᴥ•ʔ`),					
+		callAndResponse("seal", `(◕ᴥ◕)`),
+		callAndResponse("whale", `. ><(((.______)`),
+		callAndResponse("otter", `(:ᘌꇤ⁐  三`),
 		callAndResponse("shrug", `¯\_(ツ)_/¯`),
 		callAndResponse("dealwithit", `(•_•)   ( •_•)>⌐■-■    (⌐■_■)`),
 		callAndResponse("disapprove", `ಠ_ಠ`),
@@ -245,7 +256,7 @@ func findCoinID(arg string, tickers *[]cmcTicker) (string, error) {
 	return "", fmt.Errorf("coin name '%s' not found", arg)
 }
 
-func (s *Service) cmdTop(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
+func (s *Service) cmdTop(client *gomatrix.Client, roomID, userID string, maxlimit int, args []string) (*gomatrix.HTMLMessage, error) {
 	limit := 5
 	if len(args) > 0 {
 		lim, err := strconv.Atoi(args[0])
@@ -254,8 +265,8 @@ func (s *Service) cmdTop(client *gomatrix.Client, roomID, userID string, args []
 		}
 	}
 
-	if limit > 10 {
-		return simpleMessage("Yeah, that would spam the room. Try 10 or less."), nil
+	if limit > maxlimit {
+		return simpleMessage(fmt.Sprintf("Yeah, that would spam the room. Try %d or fewer.", maxlimit)), nil
 	}
 
 	query := fmt.Sprintf("?limit=%d", limit)

@@ -163,6 +163,7 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		callAndResponse("skeptical", `ಠಿ_ಠ`),
 		callAndResponse("flip", `(╯°□°）╯︵ ┻━┻`),
 		callAndResponse("moon", `┗(°0°)┛`),
+		callAndResponse("cthulhu", `^(;,;)^`),
 		callAndResponse("fhqwhgads", "Everybody. TO THE LIMIT."),
 	}
 }
@@ -395,6 +396,7 @@ func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID, query strin
 // once per message so that it responds only once. Otherwise it seems to respond
 // once per match.
 var badwordsRegex = regexp.MustCompile(`(?i:^.*\b(gevers|guido|tzlibre)\b.*$)`)
+//var badwordsRegex = regexp.MustCompile(`(?i:^(?:.*?\b(gevers|guido|tzlibre)\b)+.*?$)`)
 
 var badwordsExpand = types.Expansion{
 	Regexp: badwordsRegex,
@@ -408,11 +410,13 @@ var badwordsExpand = types.Expansion{
 	},
 }
 
+/*
 func (s *Service) Expansions(cli *gomatrix.Client) []types.Expansion {
 	return []types.Expansion{
 		badwordsExpand,
 	}
 }
+*/
 
 func init() {
 	types.RegisterService(func(serviceID, serviceUserID, webhookEndpointURL string) types.Service {

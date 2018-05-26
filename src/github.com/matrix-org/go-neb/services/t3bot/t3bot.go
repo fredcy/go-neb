@@ -35,6 +35,14 @@ Random &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosrandom:matri
 Governance &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosgovernance:matrix.org">#tezosgoverance:matrix.org</a><br>
 Ideas and Collaboration &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosfoundry:matrix.org">#tezosfoundry:matrix.org</a>
 `
+var sitesMessageHTML = `
+Tezos Developer Documentation: <a href="http://doc.tzalpha.net/">doc.tzalpha.net</a><br>
+Tezos development repository: <a href="https://gitlab.com/tezos/tezos">gitlab.com/tezos/tezos</a><br>
+Tezos Commons Foundation: <a href="https://tezoscommons.org/">tezoscommons.org</a><br>
+Tezos Community: <a href="https://www.tezos.community/">www.tezos.community</a><br>
+Tezos rocks: <a href="https://tezos.rocks/">tezos.rocks</a><br>
+Tezos help: <a href="http://www.tezos.help/">www.tezos.help</a><br>
+`
 
 var roomsHTMLMessage = gomatrix.HTMLMessage{
 	MsgType:       "m.notice",
@@ -42,13 +50,27 @@ var roomsHTMLMessage = gomatrix.HTMLMessage{
 	FormattedBody: roomsMessageHTML,
 }
 
+var sitesHTMLMessage = gomatrix.HTMLMessage{
+	MsgType:       "m.notice",
+	Format:        "org.matrix.custom.html",
+	FormattedBody: sitesMessageHTML,
+}
+
+/*
 func init() {
 	text, err := html2text.FromString(roomsMessageHTML, html2text.Options{OmitLinks: true})
 	if err != nil {
 		panic(err)
 	}
 	roomsHTMLMessage.Body = text
+
+	text, err = html2text.FromString(sitesMessageHTML, html2text.Options{OmitLinks: true})
+	if err != nil {
+		panic(err)
+	}
+	sitesHTMLMessage.Body = text
 }
+*/
 
 func simpleMessage(message string) *gomatrix.HTMLMessage {
 	msg := gomatrix.HTMLMessage{
@@ -75,6 +97,12 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 			Path: []string{"rooms"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return roomsHTMLMessage, nil
+			},
+		},
+		types.Command{
+			Path: []string{"sites"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return sitesHTMLMessage, nil
 			},
 		},
 		types.Command{

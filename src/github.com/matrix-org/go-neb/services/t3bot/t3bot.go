@@ -45,6 +45,14 @@ Tezos rocks: <a href="https://tezos.rocks/">tezos.rocks</a><br>
 Tezos help: <a href="http://www.tezos.help/">www.tezos.help</a><br>
 `
 
+var tezosMessageHTML = `
+Official Tezos sites:<br>
+https://www.reddit.com/user/TezosReddit<br>
+https://twitter.com/TezosFoundation<br>
+https://www.tezos.ch/<br>
+https://tezos.com/<br>
+`
+
 var roomsHTMLMessage = gomatrix.HTMLMessage{
 	MsgType:       "m.notice",
 	Format:        "org.matrix.custom.html",
@@ -55,6 +63,12 @@ var sitesHTMLMessage = gomatrix.HTMLMessage{
 	MsgType:       "m.notice",
 	Format:        "org.matrix.custom.html",
 	FormattedBody: sitesMessageHTML,
+}
+
+var tezosHTMLMessage = gomatrix.HTMLMessage{
+	MsgType:       "m.notice",
+	Format:        "org.matrix.custom.html",
+	FormattedBody: tezosMessageHTML,
 }
 
 /*
@@ -70,6 +84,12 @@ func init() {
 		panic(err)
 	}
 	sitesHTMLMessage.Body = text
+
+	text, err = html2text.FromString(tezosMessageHTML, html2text.Options{OmitLinks: true})
+	if err != nil {
+		panic(err)
+	}
+	tezosHTMLMessage.Body = text
 }
 */
 
@@ -104,6 +124,12 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 			Path: []string{"sites"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return sitesHTMLMessage, nil
+			},
+		},
+		types.Command{
+			Path: []string{"tezos"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return tezosHTMLMessage, nil
 			},
 		},
 		types.Command{

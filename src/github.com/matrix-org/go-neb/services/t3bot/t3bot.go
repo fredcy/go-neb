@@ -47,10 +47,10 @@ Tezos help: <a href="http://www.tezos.help/">www.tezos.help</a><br>
 
 var tezosMessageHTML = `
 Official Tezos sites:<br>
+https://www.tezosfoundation.ch<br>
 https://www.reddit.com/user/TezosReddit<br>
 https://twitter.com/TezosFoundation<br>
-https://www.tezos.ch/<br>
-https://tezos.com/<br>
+https://tezos.com<br>
 `
 
 var roomsHTMLMessage = gomatrix.HTMLMessage{

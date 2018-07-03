@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/jaytaylor/html2text"
@@ -24,6 +25,7 @@ const ServiceType = "t3bot"
 // Service represents the T3bot service. It has no Config fields.
 type Service struct {
 	types.DefaultService
+	TezosRank string
 }
 
 var roomsMessageHTML = `
@@ -473,6 +475,58 @@ func (s *Service) Expansions(cli *gomatrix.Client) []types.Expansion {
 	}
 }
 */
+
+
+func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
+	now := time.Now().Unix()
+	next := time.Unix(now + 60, 0)
+
+	response, err := queryCMC("tezos/")
+	if err != nil {
+		log.WithError(err).Error("queryCMC failed")
+		return next
+	}
+
+	var ts []cmcTicker
+	err2 := json.Unmarshal(*response, &ts)
+	if err2 != nil {
+		log.WithError(err).Error("Unmarshal failed")
+		return next
+	}
+
+	tezosConcernsRoom := "!mOcZCzWBxvtSxNvWzz:matrix.org"
+	tezosTraderRoom := "!TUYwzSQkeKBLZlWldJ:matrix.org"
+	tezosRandomRoom := "!xDsCezbpSVokOfGwCI:matrix.org"
+
+	rooms := []string{tezosConcernsRoom, tezosRandomRoom, tezosTraderRoom}
+
+	for _, ticker := range ts {
+		if ticker.Rank == s.TezosRank {
+			log.WithFields(log.Fields{"rank": ticker.Rank}).Info("rank unchanged")
+				
+			continue
+		}
+		var messageText string
+		if s.TezosRank != "" {
+			messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b> (was %s)",
+				        ticker.Rank, s.TezosRank)
+		} else {
+			messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b>",
+				         ticker.Rank)
+		}
+		s.TezosRank = ticker.Rank
+		message := gomatrix.GetHTMLMessage("m.notice", messageText)
+
+		for _, roomID := range rooms {
+			if _, err := cli.SendMessageEvent(roomID, "m.room.message", message); err != nil {
+				log.WithError(err).WithField("room_id", roomID).Error("Failed to send to room")
+			}
+		}
+	}
+
+	return next
+}
+
 
 func init() {
 	types.RegisterService(func(serviceID, serviceUserID, webhookEndpointURL string) types.Service {

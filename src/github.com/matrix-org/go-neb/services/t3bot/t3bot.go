@@ -497,14 +497,29 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	tezosConcernsRoom := "!mOcZCzWBxvtSxNvWzz:matrix.org"
 	tezosTraderRoom := "!TUYwzSQkeKBLZlWldJ:matrix.org"
 	tezosRandomRoom := "!xDsCezbpSVokOfGwCI:matrix.org"
+	tezosRoom := "!KNlqwBRiVdbAwkVpKO:matrix.org"
 
-	rooms := []string{tezosConcernsRoom, tezosRandomRoom, tezosTraderRoom}
+	// Construct list of rooms in which to report a change in the Tezos CMC rank, along with the minimum rank to ever report for each room.
+	rooms := []struct{
+		RoomID string
+		Limit int
+	}{
+		{ RoomID: tezosConcernsRoom, Limit: 2000 },
+		{ RoomID: tezosRandomRoom, Limit: 1000 },
+		{ RoomID: tezosTraderRoom, Limit: 100 },
+		{ RoomID: tezosRoom, Limit: 10 },
+	}
 
+	// We only expect one ticker in the array, but we loop anyway.
 	for _, ticker := range ts {
 		if ticker.Rank == s.TezosRank {
-			log.WithFields(log.Fields{"rank": ticker.Rank}).Info("rank unchanged")
-				
+			//log.WithFields(log.Fields{"rank": ticker.Rank}).Info("rank unchanged")
 			continue
+		} else {
+			log.WithFields(log.Fields{
+				"old": s.TezosRank,
+				"new": ticker.Rank,
+			}).Info("rank changed")
 		}
 		var messageText string
 		if s.TezosRank != "" {
@@ -517,9 +532,21 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		s.TezosRank = ticker.Rank
 		message := gomatrix.GetHTMLMessage("m.notice", messageText)
 
-		for _, roomID := range rooms {
-			if _, err := cli.SendMessageEvent(roomID, "m.room.message", message); err != nil {
-				log.WithError(err).WithField("room_id", roomID).Error("Failed to send to room")
+		rankI, err := strconv.Atoi(ticker.Rank)
+		if err != nil {
+			log.WithError(err).WithField("tickerRank", ticker.Rank).Error("Cannot convert rank to int")
+		}   
+
+		for _, room := range rooms {
+			if rankI > room.Limit {
+				log.WithFields(log.Fields{
+					"room_id": room.RoomID,
+					"rank": rankI,
+				}).Info("ignoring high rank for room")
+				continue
+			}
+			if _, err := cli.SendMessageEvent(room.RoomID, "m.room.message", message); err != nil {
+				log.WithError(err).WithField("room_id", room.RoomID).Error("Failed to send to room")
 			}
 		}
 	}

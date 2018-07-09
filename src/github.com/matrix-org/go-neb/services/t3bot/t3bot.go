@@ -263,6 +263,10 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 		allTickers = *allTickersNew
 	}
 
+	if len(args) == 0 {
+		args = []string{ "tezos" }
+	}
+
 	for _, arg := range args {
 		coinID, err := findCoinID(arg, &allTickers)
 		if err != nil {

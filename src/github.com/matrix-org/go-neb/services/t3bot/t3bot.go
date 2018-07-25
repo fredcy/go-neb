@@ -34,7 +34,6 @@ Tech &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#freenode_#tezos:mat
 Price &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezostrader:matrix.org">#tezostrader:matrix.org</a><br>
 Media &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosmedia:matrix.org">#tezosmedia:matrix.org</a><br>
 Random &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosrandom:matrix.org">#tezosrandom:matrix.org</a><br>
-Game Dev &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosgaming:matrix.org">#tezosgaming:matrix.org</a><br>
 Governance &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosgovernance:matrix.org">#tezosgoverance:matrix.org</a><br>
 Announcements &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosannouncements:matrix.org">#tezosannouncements:matrix.org</a><br>
 Ideas and Collaboration &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosfoundry:matrix.org">#tezosfoundry:matrix.org</a>
@@ -56,6 +55,16 @@ https://twitter.com/TezosFoundation<br>
 https://tezos.com<br>
 `
 
+var devSitesMessageHTML = `
+Developer sites:<br>
+<a href="http://doc.tzalpha.net">Core dev docs</a></br>
+<a href="https://gitlab.com/tezos/tezos">Core dev repo</a><br>
+<a href="https://github.com/tezoscommunity/FAQ/blob/master/Compile_Betanet.md">Compile Betanet</a><br>
+<a href="https://github.com/tezoscommunity/FAQ/blob/master/Rebuilding_Betanet.md">Rebuilding Betanet</a><br>
+<a href="https://gist.github.com/dakk/bdf6efe42ae920acc660b20080a506dd">Baking howto</a><br>
+<a href="https://github.com/obsidiansystems/ledger-app-tezos/blob/master/README.md">Ledger Applications</a><br>
+`
+
 var roomsHTMLMessage = gomatrix.HTMLMessage{
 	MsgType:       "m.notice",
 	Format:        "org.matrix.custom.html",
@@ -72,6 +81,12 @@ var tezosHTMLMessage = gomatrix.HTMLMessage{
 	MsgType:       "m.notice",
 	Format:        "org.matrix.custom.html",
 	FormattedBody: tezosMessageHTML,
+}
+
+var devSitesHTMLMessage = gomatrix.HTMLMessage{
+	MsgType:       "m.notice",
+	Format:        "org.matrix.custom.html",
+	FormattedBody: devSitesMessageHTML,
 }
 
 /*
@@ -93,6 +108,12 @@ func init() {
 		panic(err)
 	}
 	tezosHTMLMessage.Body = text
+
+	text, err = html2text.FromString(devSitesMessageHTML, html2text.Options{OmitLinks: true})
+	if err != nil {
+		panic(err)
+	}
+	devSitesHTMLMessage.Body = text
 }
 */
 
@@ -133,6 +154,12 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 			Path: []string{"tezos"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return tezosHTMLMessage, nil
+			},
+		},
+		types.Command{
+			Path: []string{"devsites"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return devSitesHTMLMessage, nil
 			},
 		},
 		types.Command{
@@ -270,7 +297,7 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 	for _, arg := range args {
 		coinID, err := findCoinID(arg, &allTickers)
 		if err != nil {
-			return nil, err // TODO handle gradefully
+			return nil, err // TODO handle gracefully
 		}
 
 		response, err := queryCMC(coinID + "/")

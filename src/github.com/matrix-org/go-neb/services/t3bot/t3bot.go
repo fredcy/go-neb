@@ -34,6 +34,7 @@ Tech &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#freenode_#tezos:mat
 Price &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezostrader:matrix.org">#tezostrader:matrix.org</a><br>
 Media &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosmedia:matrix.org">#tezosmedia:matrix.org</a><br>
 Random &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosrandom:matrix.org">#tezosrandom:matrix.org</a><br>
+Philosophy &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosphilosophy:matrix.org">#tezosphilosophy:matrix.org</a><br>
 Governance &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosgovernance:matrix.org">#tezosgoverance:matrix.org</a><br>
 Announcements &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosannouncements:matrix.org">#tezosannouncements:matrix.org</a><br>
 Ideas and Collaboration &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosfoundry:matrix.org">#tezosfoundry:matrix.org</a>
@@ -512,6 +513,8 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	now := time.Now().Unix()
 	next := time.Unix(now + 60, 0)
 
+	//return next   // STUB OFF
+
 	response, err := queryCMC("tezos/")
 	if err != nil {
 		log.WithError(err).Error("queryCMC failed")
@@ -557,8 +560,8 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 			messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b> (was %s)",
 				        ticker.Rank, s.TezosRank)
 		} else {
-			messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b>",
-				         ticker.Rank)
+			//messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b>",
+			//	         ticker.Rank)
 		}
 		s.TezosRank = ticker.Rank
 		message := gomatrix.GetHTMLMessage("m.notice", messageText)

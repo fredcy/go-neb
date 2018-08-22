@@ -559,11 +559,21 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		if s.TezosRank != "" {
 			messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b> (was %s)",
 				        ticker.Rank, s.TezosRank)
+
+			// longer poll after reporting, to reduce thrashing
+			next = time.Unix(now + 60*60, 0)
 		} else {
+			// first time querying (since we don't know prior value)
+
 			//messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b>",
 			//	         ticker.Rank)
 		}
 		s.TezosRank = ticker.Rank
+
+		if messageText == "" {
+			continue
+		}
+
 		message := gomatrix.GetHTMLMessage("m.notice", messageText)
 
 		rankI, err := strconv.Atoi(ticker.Rank)

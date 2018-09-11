@@ -216,6 +216,13 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		},
 
 		types.Command{
+			Path: []string{"cmc2"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return e.cmdCMC2(cli, roomID, userID, args)
+			},
+		},
+
+		types.Command{
 			Path: []string{"top"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return e.cmdTop(cli, roomID, userID, 10, args)
@@ -239,7 +246,7 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		callAndResponse("bear", "ʕ ·(エ)· ʔ"),
 		callAndResponse("bull", `ᓷ( ఠൠఠ )ᓸ`),
 		callAndResponse("cub", `ʕ •ᴥ•ʔ`),
-		callAndResponse("koala", `ʕ •ᴥ•ʔ`),					
+		callAndResponse("koala", `ʕ •ᴥ•ʔ`),
 		callAndResponse("seal", `(◕ᴥ◕)`),
 		callAndResponse("whale", `. ><(((.______)`),
 		callAndResponse("otter", `(:ᘌꇤ⁐  三`),
@@ -253,7 +260,6 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		callAndResponse("fhqwhgads", "Everybody. TO THE LIMIT."),
 	}
 }
-
 
 func callAndResponse(cmd, response string) types.Command {
 	return types.Command{
@@ -278,6 +284,29 @@ type cmcTicker struct {
 
 var allTickers []cmcTicker
 
+type cmcTicker2 struct {
+	Id      int     `json:"id"`
+	Name    string  `json:"name"`
+	Symbol  string  `json:"symbol"`
+	Slug    string  `json:"website_slug"`
+	Rank    int     `json:"rank"`
+	CircSup float64 `json:"circulating_supply"`
+	TotSup  float64 `json:"total_supply"`
+	MaxSup  float64 `json:"max_supply"`
+	Quotes  struct {
+		USD struct {
+			Price  float64 `json:"price"`
+			Vol24  float64 `json:"volume_24h"`
+			Cap    float64 `json:"market_cap"`
+			Pct1H  float64 `json:"percent_change_1h"`
+			Pct24H float64 `json:"percent_change_24h"`
+			Pct7D  float64 `json:"percent_change_7d"`
+		} `json:"USD"`
+	} `json:"quotes"`
+}
+
+var allTickers2 []cmcListing2
+
 func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
 	var tickers []cmcTicker
 
@@ -292,7 +321,7 @@ func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []
 	}
 
 	if len(args) == 0 {
-		args = []string{ "tezos" }
+		args = []string{"tezos"}
 	}
 
 	for _, arg := range args {
@@ -345,6 +374,102 @@ func findCoinID(arg string, tickers *[]cmcTicker) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("coin name '%s' not found", arg)
+}
+
+type cmcListing2 struct {
+	Id     int    `json:"id"`
+	Name   string `json:"name"`
+	Symbol string `json:"symbol"`
+	Slug   string `json:"website_slug"`
+}
+
+type cmcTickerResponse2 struct {
+	Data     []cmcTicker2 `json:"data"`
+	Metadata struct {
+		Timestamp int    `json:"timestamp"`
+		Error     string `json:"error"`
+	} `json:"metadata"`
+}
+
+func (s *Service) cmdCMC2(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
+	var tickers []cmcTicker2
+
+	// Make sure we have data about all coins known by CMC, which findCoinID()
+	// uses to look up the canonical id for a coin given the user-entered name.
+	if len(allTickers2) == 0 {
+		allTickersNew, err := getAllTickers2()
+		if err != nil {
+			return nil, err
+		}
+		allTickers2 = *allTickersNew
+	}
+
+	if len(args) == 0 {
+		args = []string{"tezos"}
+	}
+
+	for _, arg := range args {
+		coinID, err := findCoinID2(arg, &allTickers2)
+		if err != nil {
+			return nil, err // TODO handle gracefully
+		}
+
+		responseBytes, err := queryCMC2("/ticker/" + strconv.Itoa(coinID) + "/")
+		if err != nil {
+			return nil, err
+		}
+		//log.WithFields(log.Fields{"response": string(*response)}).Info("CMC response")
+
+		var response cmcTickerResponse2
+		err2 := json.Unmarshal(*responseBytes, &response)
+		if err2 != nil {
+			return nil, err // TODO hide from user
+		}
+		if len(response.Metadata.Error) > 0 {
+			return nil, fmt.Errorf("response error: %s", response.Metadata.Error)
+		}
+		tickers = append(tickers, response.Data...)
+	}
+
+	return displayTickers2(&tickers)
+}
+
+type cmcListingResponse2 struct {
+	Data     []cmcListing2 `json:"data"`
+	Metadata struct {
+		Timestamp            int    `json:"timestamp"`
+		Num_Cryptocurrencies int    `json:"num_cryptocurrencies"`
+		Error                string `json:"error"`
+	} `json:"metadata"`
+}
+
+func getAllTickers2() (*[]cmcListing2, error) {
+	bytes, err := queryCMC2("listings/")
+	if err != nil {
+		return nil, err
+	}
+
+	var response cmcListingResponse2
+	err2 := json.Unmarshal(*bytes, &response)
+	if err2 != nil {
+		return nil, err2
+	}
+	log.WithFields(log.Fields{"len": len(response.Data)}).Info("getAllTickers2")
+	return &response.Data, nil
+}
+
+// findCoin takes a user-supplied coin name and tries to find the canonical CMC
+// id for it (as needed for queries to their API), referencing an array of
+// ticker info that gives the Id, Name, and Symbol for a set coin types.
+func findCoinID2(arg string, tickers *[]cmcListing2) (int, error) {
+	target := strings.ToLower(arg)
+	for _, t := range *tickers {
+		if target == strings.ToLower(t.Symbol) || target == strings.ToLower(t.Name) {
+			log.WithFields(log.Fields{"arg": arg, "return": t.Id}).Info("findCoinID2")
+			return t.Id, nil
+		}
+	}
+	return 0, fmt.Errorf("coin name '%s' not found", arg)
 }
 
 func (s *Service) cmdTop(client *gomatrix.Client, roomID, userID string, maxlimit int, args []string) (*gomatrix.HTMLMessage, error) {
@@ -434,12 +559,81 @@ func displayTickers(tickers *[]cmcTicker) (*gomatrix.HTMLMessage, error) {
 	return &htmlMessage, nil
 }
 
+func displayTickers2(tickers *[]cmcTicker2) (*gomatrix.HTMLMessage, error) {
+	thead := `<thead><tr>
+<th>symbol</th>
+<th>Latest (USD)</th>
+<th>1H %Δ</th>
+<th>24H %Δ</th>
+<th>7D %Δ</th>
+<th>Rank</th>
+<th>Mkt Cap (M USD)</th>
+</tr></thead>`
+
+	rowFormat := `<tr>
+<td>%s</td>
+<td>%f</td>
+<td>%f</td>
+<td>%f</td>
+<td>%f</td>
+<td>%f</td>
+<td>%f</td>
+</tr>`
+
+	tbody := `<tbody>`
+	for _, ticker := range *tickers {
+		tbody += fmt.Sprintf(rowFormat, ticker.Symbol, ticker.Quotes.USD.Price,
+			ticker.Quotes.USD.Pct1H, ticker.Quotes.USD.Pct24H, ticker.Quotes.USD.Pct7D,
+			ticker.Rank, ticker.Quotes.USD.Cap/1000000)
+	}
+	tbody += `</tbody>`
+	table := `<table>` + thead + tbody + `</table>`
+
+	// Convert the HTML table to text alternative format. Unfortunately, Riot
+	// clients on android and IOS ignore this and display a half-fast rendering
+	// of the HTML without any tabular layout.
+	tableText, err3 := html2text.FromString(table, html2text.Options{PrettyTables: true})
+	if err3 != nil {
+		return nil, err3
+	}
+
+	htmlMessage := gomatrix.HTMLMessage{
+		MsgType:       "m.notice",
+		Format:        "org.matrix.custom.html",
+		FormattedBody: table,
+		Body:          tableText,
+	}
+
+	return &htmlMessage, nil
+}
+
 // queryCMC sends a ticker query to the coinmarketcap.com API and returns the
 // response bytes, which should be a JSON value for an array of ticker objects.
 func queryCMC(query string) (*[]byte, error) {
 	log.WithFields(log.Fields{"query": query}).Info("queryCMC")
 
 	url := "https://api.coinmarketcap.com/v1/ticker/" + query
+	resp, err := http.Get(url)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("get of %s returned code %v", url, resp.StatusCode)
+	}
+	bodyBytes, err2 := ioutil.ReadAll(resp.Body)
+	if err2 != nil {
+		return nil, err2
+	}
+	return &bodyBytes, nil
+}
+
+func queryCMC2(query string) (*[]byte, error) {
+	log.WithFields(log.Fields{"query": query}).Info("queryCMC2")
+
+	url := "https://api.coinmarketcap.com/v2/" + query
 	resp, err := http.Get(url)
 	if resp != nil {
 		defer resp.Body.Close()
@@ -486,6 +680,7 @@ func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID, query strin
 // once per message so that it responds only once. Otherwise it seems to respond
 // once per match.
 var badwordsRegex = regexp.MustCompile(`(?i:^.*\b(gevers|guido|tzlibre)\b.*$)`)
+
 //var badwordsRegex = regexp.MustCompile(`(?i:^(?:.*?\b(gevers|guido|tzlibre)\b)+.*?$)`)
 
 var badwordsExpand = types.Expansion{
@@ -508,10 +703,11 @@ func (s *Service) Expansions(cli *gomatrix.Client) []types.Expansion {
 }
 */
 
-
 func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
-	now := time.Now().Unix()
-	next := time.Unix(now + 60, 0)
+	pollingInterval := 10 * time.Minute
+	delayAfterReport := 60 * time.Minute
+
+	next := time.Now().Add(pollingInterval)
 
 	//return next   // STUB OFF
 
@@ -534,14 +730,14 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	tezosRoom := "!KNlqwBRiVdbAwkVpKO:matrix.org"
 
 	// Construct list of rooms in which to report a change in the Tezos CMC rank, along with the minimum rank to ever report for each room.
-	rooms := []struct{
+	rooms := []struct {
 		RoomID string
-		Limit int
+		Limit  int
 	}{
-		{ RoomID: tezosConcernsRoom, Limit: 2000 },
-		{ RoomID: tezosRandomRoom, Limit: 1000 },
-		{ RoomID: tezosTraderRoom, Limit: 100 },
-		{ RoomID: tezosRoom, Limit: 10 },
+		{RoomID: tezosConcernsRoom, Limit: 2000},
+		{RoomID: tezosRandomRoom, Limit: 1000},
+		{RoomID: tezosTraderRoom, Limit: 100},
+		{RoomID: tezosRoom, Limit: 10},
 	}
 
 	// We only expect one ticker in the array, but we loop anyway.
@@ -558,10 +754,10 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		var messageText string
 		if s.TezosRank != "" {
 			messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b> (was %s)",
-				        ticker.Rank, s.TezosRank)
+				ticker.Rank, s.TezosRank)
 
 			// longer poll after reporting, to reduce thrashing
-			next = time.Unix(now + 60*60, 0)
+			next = time.Now().Add(delayAfterReport)
 		} else {
 			// first time querying (since we don't know prior value)
 
@@ -579,13 +775,13 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		rankI, err := strconv.Atoi(ticker.Rank)
 		if err != nil {
 			log.WithError(err).WithField("tickerRank", ticker.Rank).Error("Cannot convert rank to int")
-		}   
+		}
 
 		for _, room := range rooms {
 			if rankI > room.Limit {
 				log.WithFields(log.Fields{
 					"room_id": room.RoomID,
-					"rank": rankI,
+					"rank":    rankI,
 				}).Info("ignoring high rank for room")
 				continue
 			}
@@ -597,7 +793,6 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 
 	return next
 }
-
 
 func init() {
 	types.RegisterService(func(serviceID, serviceUserID, webhookEndpointURL string) types.Service {

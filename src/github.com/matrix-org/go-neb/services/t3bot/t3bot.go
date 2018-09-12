@@ -218,7 +218,9 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		types.Command{
 			Path: []string{"cmc2"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				return e.cmdCMC2(cli, roomID, userID, args)
+				content, err := e.cmdCMC2(cli, roomID, userID, args)
+				log.WithFields(log.Fields{"content": fmt.Sprintf("%v", content), "error": err}).Info("cmc2 response")
+				return content, err
 			},
 		},
 
@@ -399,7 +401,7 @@ func (s *Service) cmdCMC2(client *gomatrix.Client, roomID, userID string, args [
 	if len(allTickers2) == 0 {
 		allTickersNew, err := getAllTickers2()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getAllTickers2: %v", err)
 		}
 		allTickers2 = *allTickersNew
 	}
@@ -411,19 +413,19 @@ func (s *Service) cmdCMC2(client *gomatrix.Client, roomID, userID string, args [
 	for _, arg := range args {
 		coinID, err := findCoinID2(arg, &allTickers2)
 		if err != nil {
-			return nil, err // TODO handle gracefully
+			return nil, fmt.Errorf("findCoinID2: %v", err) // TODO handle gracefully
 		}
 
 		responseBytes, err := queryCMC2("/ticker/" + strconv.Itoa(coinID) + "/")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("queryCMC2: %v", err)
 		}
 		//log.WithFields(log.Fields{"response": string(*response)}).Info("CMC response")
 
 		var response cmcTickerResponse2
 		err2 := json.Unmarshal(*responseBytes, &response)
 		if err2 != nil {
-			return nil, err // TODO hide from user
+			return nil, fmt.Errorf("Unmarshal: %v", err) // TODO hide from user
 		}
 		if len(response.Metadata.Error) > 0 {
 			return nil, fmt.Errorf("response error: %s", response.Metadata.Error)
@@ -639,14 +641,14 @@ func queryCMC2(query string) (*[]byte, error) {
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Get(%s): %v", url, err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("get of %s returned code %v", url, resp.StatusCode)
 	}
 	bodyBytes, err2 := ioutil.ReadAll(resp.Body)
 	if err2 != nil {
-		return nil, err2
+		return nil, fmt.Errorf("ReadAll: %v", err2)
 	}
 	return &bodyBytes, nil
 }

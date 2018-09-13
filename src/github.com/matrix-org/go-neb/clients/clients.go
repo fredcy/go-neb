@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -235,13 +236,15 @@ func runCommandForService(cmds []types.Command, event *gomatrix.Event, arguments
 	}).Info("Executing command")
 	content, err := bestMatch.Command(event.RoomID, event.Sender, cmdArgs)
 	if err != nil {
-		if content != nil {
+		if !(content == nil || reflect.ValueOf(content).IsNil()) {
 			log.WithFields(log.Fields{
 				log.ErrorKey: err,
 				"room_id":    event.RoomID,
 				"user_id":    event.Sender,
 				"command":    bestMatch.Path,
 				"args":       cmdArgs,
+				"content":    content,
+				"type":       reflect.TypeOf(content),
 			}).Warn("Command returned both error and content.")
 		}
 		metrics.IncrementCommand(bestMatch.Path[0], metrics.StatusFailure)

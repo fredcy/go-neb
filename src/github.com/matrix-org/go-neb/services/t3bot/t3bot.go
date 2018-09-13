@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,7 +20,7 @@ const ServiceType = "t3bot"
 // Service represents the T3bot service. It has no Config fields.
 type Service struct {
 	types.DefaultService
-	TezosRank string
+	TezosRank int
 }
 
 var roomsMessageHTML = `
@@ -33,6 +32,7 @@ Random &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosrandom:matri
 Philosophy &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosphilosophy:matrix.org">#tezosphilosophy:matrix.org</a><br>
 Governance &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosgovernance:matrix.org">#tezosgoverance:matrix.org</a><br>
 Announcements &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosannouncements:matrix.org">#tezosannouncements:matrix.org</a><br>
+Baking and Delegation &nbsp;&nbsp;&nbsp;  <a href="https://riot.im/app/#/room/#tezosdelegate:matrix.org">#tezosdelegate:matrix.org</a><br>
 Ideas and Collaboration &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosfoundry:matrix.org">#tezosfoundry:matrix.org</a>
 `
 var sitesMessageHTML = `
@@ -215,7 +215,7 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 			Path: []string{"cmc2"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				content, err := e.cmdCMC2(cli, roomID, userID, args)
-				log.WithFields(log.Fields{"content": fmt.Sprintf("%v", content), "error": err}).Info("cmc2 response")
+				log.WithFields(log.Fields{"content": content, "error": err}).Info("cmc2 response")
 				return content, err
 			},
 		},
@@ -303,16 +303,20 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 
 	//return next   // STUB OFF
 
-	response, err := queryCMC("tezos/")
+	responseBytes, err := queryCMC2("ticker/2011/")
 	if err != nil {
-		log.WithError(err).Error("queryCMC failed")
+		log.WithError(err).Error("queryCMC2 failed")
 		return next
 	}
 
-	var ts []cmcTicker
-	err2 := json.Unmarshal(*response, &ts)
+	var response cmcTickerResponse2
+	err2 := json.Unmarshal(*responseBytes, &response)
 	if err2 != nil {
-		log.WithError(err).Error("Unmarshal failed")
+		log.WithError(err2).Error("Unmarshal failed")
+		return next
+	}
+	if len(response.Metadata.Error) > 0 {
+		log.WithFields(log.Fields{"error": response.Metadata.Error}).Error("Error msg in response")
 		return next
 	}
 
@@ -333,7 +337,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	}
 
 	// We only expect one ticker in the array, but we loop anyway.
-	for _, ticker := range ts {
+	for _, ticker := range response.Data {
 		if ticker.Rank == s.TezosRank {
 			//log.WithFields(log.Fields{"rank": ticker.Rank}).Info("rank unchanged")
 			continue
@@ -344,7 +348,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 			}).Info("rank changed")
 		}
 		var messageText string
-		if s.TezosRank != "" {
+		if s.TezosRank != 0 {
 			messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b> (was %s)",
 				ticker.Rank, s.TezosRank)
 
@@ -364,16 +368,11 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 
 		message := gomatrix.GetHTMLMessage("m.notice", messageText)
 
-		rankI, err := strconv.Atoi(ticker.Rank)
-		if err != nil {
-			log.WithError(err).WithField("tickerRank", ticker.Rank).Error("Cannot convert rank to int")
-		}
-
 		for _, room := range rooms {
-			if rankI > room.Limit {
+			if ticker.Rank > room.Limit {
 				log.WithFields(log.Fields{
 					"room_id": room.RoomID,
-					"rank":    rankI,
+					"rank":    ticker.Rank,
 				}).Info("ignoring high rank for room")
 				continue
 			}

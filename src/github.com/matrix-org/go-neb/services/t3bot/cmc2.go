@@ -20,6 +20,27 @@ type cmcListing2 struct {
 	Slug   string `json:"website_slug"`
 }
 
+type cmcTicker2 struct {
+	Id      int     `json:"id"`
+	Name    string  `json:"name"`
+	Symbol  string  `json:"symbol"`
+	Slug    string  `json:"website_slug"`
+	Rank    int     `json:"rank"`
+	CircSup float64 `json:"circulating_supply"`
+	TotSup  float64 `json:"total_supply"`
+	MaxSup  float64 `json:"max_supply"`
+	Quotes  struct {
+		USD struct {
+			Price  float64 `json:"price"`
+			Vol24  float64 `json:"volume_24h"`
+			Cap    float64 `json:"market_cap"`
+			Pct1H  float64 `json:"percent_change_1h"`
+			Pct24H float64 `json:"percent_change_24h"`
+			Pct7D  float64 `json:"percent_change_7d"`
+		} `json:"USD"`
+	} `json:"quotes"`
+}
+
 type cmcTickerResponse2 struct {
 	Data     []cmcTicker2 `json:"data"`
 	Metadata struct {
@@ -27,6 +48,8 @@ type cmcTickerResponse2 struct {
 		Error     string `json:"error"`
 	} `json:"metadata"`
 }
+
+var allTickers2 []cmcListing2
 
 func (s *Service) cmdCMC2(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
 	var tickers []cmcTicker2
@@ -60,7 +83,7 @@ func (s *Service) cmdCMC2(client *gomatrix.Client, roomID, userID string, args [
 		var response cmcTickerResponse2
 		err2 := json.Unmarshal(*responseBytes, &response)
 		if err2 != nil {
-			return nil, fmt.Errorf("Unmarshal: %v", err) // TODO hide from user
+			return nil, fmt.Errorf("Unmarshal: %v", err2) // TODO hide from user
 		}
 		if len(response.Metadata.Error) > 0 {
 			return nil, fmt.Errorf("response error: %s", response.Metadata.Error)
@@ -129,29 +152,6 @@ func findCoinID2(arg string, tickers *[]cmcListing2) (int, error) {
 	}
 	return 0, fmt.Errorf("coin name '%s' not found", arg)
 }
-
-type cmcTicker2 struct {
-	Id      int     `json:"id"`
-	Name    string  `json:"name"`
-	Symbol  string  `json:"symbol"`
-	Slug    string  `json:"website_slug"`
-	Rank    int     `json:"rank"`
-	CircSup float64 `json:"circulating_supply"`
-	TotSup  float64 `json:"total_supply"`
-	MaxSup  float64 `json:"max_supply"`
-	Quotes  struct {
-		USD struct {
-			Price  float64 `json:"price"`
-			Vol24  float64 `json:"volume_24h"`
-			Cap    float64 `json:"market_cap"`
-			Pct1H  float64 `json:"percent_change_1h"`
-			Pct24H float64 `json:"percent_change_24h"`
-			Pct7D  float64 `json:"percent_change_7d"`
-		} `json:"USD"`
-	} `json:"quotes"`
-}
-
-var allTickers2 []cmcListing2
 
 func displayTickers2(tickers *[]cmcTicker2) (*gomatrix.HTMLMessage, error) {
 	thead := `<thead><tr>

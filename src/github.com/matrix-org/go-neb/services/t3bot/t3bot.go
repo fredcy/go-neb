@@ -214,9 +214,7 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		types.Command{
 			Path: []string{"cmc2"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				content, err := e.cmdCMC2(cli, roomID, userID, args)
-				log.WithFields(log.Fields{"content": content, "error": err}).Info("cmc2 response")
-				return content, err
+				return e.cmdCMC2(cli, roomID, userID, args)
 			},
 		},
 
@@ -336,49 +334,47 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		{RoomID: tezosRoom, Limit: 10},
 	}
 
-	// We only expect one ticker in the array, but we loop anyway.
-	for _, ticker := range response.Data {
-		if ticker.Rank == s.TezosRank {
-			//log.WithFields(log.Fields{"rank": ticker.Rank}).Info("rank unchanged")
-			continue
-		} else {
+	ticker := response.Data
+	if ticker.Rank == s.TezosRank {
+		//log.WithFields(log.Fields{"rank": ticker.Rank}).Info("rank unchanged")
+		return next
+	} else {
+		log.WithFields(log.Fields{
+			"old": s.TezosRank,
+			"new": ticker.Rank,
+		}).Info("rank changed")
+	}
+	var messageText string
+	if s.TezosRank != 0 {
+		messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b> (was %s)",
+			ticker.Rank, s.TezosRank)
+
+		// longer poll after reporting, to reduce thrashing
+		next = time.Now().Add(delayAfterReport)
+	} else {
+		// first time querying (since we don't know prior value)
+
+		//messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b>",
+		//	         ticker.Rank)
+	}
+	s.TezosRank = ticker.Rank
+
+	if messageText == "" {
+		return next
+	}
+
+	message := gomatrix.GetHTMLMessage("m.notice", messageText)
+
+	for _, room := range rooms {
+		if ticker.Rank > room.Limit {
 			log.WithFields(log.Fields{
-				"old": s.TezosRank,
-				"new": ticker.Rank,
-			}).Info("rank changed")
-		}
-		var messageText string
-		if s.TezosRank != 0 {
-			messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b> (was %s)",
-				ticker.Rank, s.TezosRank)
-
-			// longer poll after reporting, to reduce thrashing
-			next = time.Now().Add(delayAfterReport)
-		} else {
-			// first time querying (since we don't know prior value)
-
-			//messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b>",
-			//	         ticker.Rank)
-		}
-		s.TezosRank = ticker.Rank
-
-		if messageText == "" {
+				"room_id": room.RoomID,
+				"rank":    ticker.Rank,
+			}).Info("ignoring high rank for room")
 			continue
 		}
-
-		message := gomatrix.GetHTMLMessage("m.notice", messageText)
-
-		for _, room := range rooms {
-			if ticker.Rank > room.Limit {
-				log.WithFields(log.Fields{
-					"room_id": room.RoomID,
-					"rank":    ticker.Rank,
-				}).Info("ignoring high rank for room")
-				continue
-			}
-			if _, err := cli.SendMessageEvent(room.RoomID, "m.room.message", message); err != nil {
-				log.WithError(err).WithField("room_id", room.RoomID).Error("Failed to send to room")
-			}
+		if _, err := cli.SendMessageEvent(room.RoomID, "m.room.message", message); err != nil {
+			log.WithError(err).WithField("room_id", room.RoomID).Error("Failed to send to room")
 		}
 	}
 

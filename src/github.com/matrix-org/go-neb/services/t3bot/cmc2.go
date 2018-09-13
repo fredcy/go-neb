@@ -42,7 +42,7 @@ type cmcTicker2 struct {
 }
 
 type cmcTickerResponse2 struct {
-	Data     []cmcTicker2 `json:"data"`
+	Data     cmcTicker2 `json:"data"`
 	Metadata struct {
 		Timestamp int    `json:"timestamp"`
 		Error     string `json:"error"`
@@ -88,7 +88,7 @@ func (s *Service) cmdCMC2(client *gomatrix.Client, roomID, userID string, args [
 		if len(response.Metadata.Error) > 0 {
 			return nil, fmt.Errorf("response error: %s", response.Metadata.Error)
 		}
-		tickers = append(tickers, response.Data...)
+		tickers = append(tickers, response.Data)
 	}
 
 	return displayTickers2(&tickers)
@@ -166,12 +166,12 @@ func displayTickers2(tickers *[]cmcTicker2) (*gomatrix.HTMLMessage, error) {
 
 	rowFormat := `<tr>
 <td>%s</td>
-<td>%f</td>
-<td>%f</td>
-<td>%f</td>
-<td>%f</td>
-<td>%f</td>
-<td>%f</td>
+<td>%.2f</td>
+<td>%.2f</td>
+<td>%.2f</td>
+<td>%.2f</td>
+<td>%d</td>
+<td>%.f</td>
 </tr>`
 
 	tbody := `<tbody>`

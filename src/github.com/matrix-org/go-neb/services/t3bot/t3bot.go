@@ -10,6 +10,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/jaytaylor/html2text"
 	"github.com/matrix-org/go-neb/types"
 	"github.com/matrix-org/gomatrix"
 )
@@ -219,6 +220,13 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		},
 
 		types.Command{
+			Path: []string{"cmcp"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return e.cmdCMCPro(cli, roomID, userID, args)
+			},
+		},
+
+		types.Command{
 			Path: []string{"top"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return e.cmdTop(cli, roomID, userID, 10, args)
@@ -293,6 +301,77 @@ func (s *Service) Expansions(cli *gomatrix.Client) []types.Expansion {
 }
 */
 
+var CmcProListings *[]cmcProListing
+var CmcProMap *[]cmcProMapItem
+
+func (s *Service) cmdCMCPro(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
+	if len(args) == 0 {
+		args = []string{"tezos"}
+	}
+
+	var tickers []cmcProListing
+	for _, arg := range args {
+		target := strings.ToLower(arg)
+		for _, item := range *CmcProListings {
+			if target == strings.ToLower(item.Symbol) || target == strings.ToLower(item.Name) {
+				tickers = append(tickers, item)
+				break
+			}
+		}
+	}
+
+	return displayTickersPro(&tickers)
+}
+
+func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) {
+	thead := `<thead><tr>
+<th>symbol</th>
+<th>Latest (USD)</th>
+<th>1H %Δ</th>
+<th>24H %Δ</th>
+<th>7D %Δ</th>
+<th>Rank</th>
+<th>Mkt Cap (M USD)</th>
+</tr></thead>`
+
+	rowFormat := `<tr>
+<td>%s</td>
+<td>%.2f</td>
+<td>%.2f</td>
+<td>%.2f</td>
+<td>%.2f</td>
+<td>%d</td>
+<td>%.f</td>
+</tr>`
+
+	tbody := `<tbody>`
+	for _, ticker := range *tickers {
+		tbody += fmt.Sprintf(rowFormat, ticker.Symbol, ticker.Quote.USD.Price,
+			ticker.Quote.USD.Percent_change_1h, ticker.Quote.USD.Percent_change_24h,
+			ticker.Quote.USD.Percent_change_7d,
+			ticker.Cmc_rank, ticker.Quote.USD.Market_cap/1000000)
+	}
+	tbody += `</tbody>`
+	table := `<table>` + thead + tbody + `</table>`
+
+	// Convert the HTML table to text alternative format. Unfortunately, Riot
+	// clients on android and IOS ignore this and display a half-fast rendering
+	// of the HTML without any tabular layout.
+	tableText, err3 := html2text.FromString(table, html2text.Options{PrettyTables: true})
+	if err3 != nil {
+		return nil, err3
+	}
+
+	htmlMessage := gomatrix.HTMLMessage{
+		MsgType:       "m.notice",
+		Format:        "org.matrix.custom.html",
+		FormattedBody: table,
+		Body:          tableText,
+	}
+
+	return &htmlMessage, nil
+}
+
 func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	pollingInterval := 10 * time.Minute
 	delayAfterReport := 60 * time.Minute
@@ -301,20 +380,23 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 
 	//return next   // STUB OFF
 
-	responseBytes, err := queryCMC2("ticker/2011/")
+	listings, err := getCmcProListings()
 	if err != nil {
-		log.WithError(err).Error("queryCMC2 failed")
+		log.WithError(err).Error("getCmcProListings")
 		return next
+	} else {
+		CmcProListings = listings
 	}
 
-	var response cmcTickerResponse2
-	err2 := json.Unmarshal(*responseBytes, &response)
-	if err2 != nil {
-		log.WithError(err2).Error("Unmarshal failed")
-		return next
+	var xtzListing *cmcProListing
+	for _, item := range *CmcProListings {
+		if item.Symbol == "XTZ" {
+			xtzListing = &item
+			break
+		}
 	}
-	if len(response.Metadata.Error) > 0 {
-		log.WithFields(log.Fields{"error": response.Metadata.Error}).Error("Error msg in response")
+	if xtzListing == nil {
+		log.Error("cannot find XTZ in listings")
 		return next
 	}
 
@@ -334,20 +416,20 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		{RoomID: tezosRoom, Limit: 10},
 	}
 
-	ticker := response.Data
-	if ticker.Rank == s.TezosRank {
-		//log.WithFields(log.Fields{"rank": ticker.Rank}).Info("rank unchanged")
+	ticker := *xtzListing
+	if ticker.Cmc_rank == s.TezosRank {
+		//log.WithFields(log.Fields{"rank": ticker.Cmc_rank}).Info("rank unchanged")
 		return next
 	} else {
 		log.WithFields(log.Fields{
 			"old": s.TezosRank,
-			"new": ticker.Rank,
+			"new": ticker.Cmc_rank,
 		}).Info("rank changed")
 	}
 	var messageText string
 	if s.TezosRank != 0 {
 		messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b> (was %s)",
-			ticker.Rank, s.TezosRank)
+			ticker.Cmc_rank, s.TezosRank)
 
 		// longer poll after reporting, to reduce thrashing
 		next = time.Now().Add(delayAfterReport)
@@ -355,9 +437,9 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		// first time querying (since we don't know prior value)
 
 		//messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b>",
-		//	         ticker.Rank)
+		//	         ticker.Cmc_rank)
 	}
-	s.TezosRank = ticker.Rank
+	s.TezosRank = ticker.Cmc_rank
 
 	if messageText == "" {
 		return next
@@ -366,10 +448,10 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	message := gomatrix.GetHTMLMessage("m.notice", messageText)
 
 	for _, room := range rooms {
-		if ticker.Rank > room.Limit {
+		if ticker.Cmc_rank > room.Limit {
 			log.WithFields(log.Fields{
 				"room_id": room.RoomID,
-				"rank":    ticker.Rank,
+				"rank":    ticker.Cmc_rank,
 			}).Info("ignoring high rank for room")
 			continue
 		}

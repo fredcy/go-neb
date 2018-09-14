@@ -6,6 +6,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -101,8 +102,12 @@ func queryCMCPro(query string) (*[]byte, error) {
 		return nil, err
 	}
 
-	// TODO: get key from environ
-	req.Header.Add("X-CMC_PRO_API_KEY", "5c079ffc-33e2-4b83-ab5b-5ec920665038")
+	api_key := os.Getenv("CMC_PRO_API_KEY")
+	if len(api_key) == 0 {
+		return nil, fmt.Errorf("API key not set in environ")
+	}
+
+	req.Header.Add("X-CMC_PRO_API_KEY", api_key)
 
 	resp, err := client.Do(req)
 	if resp != nil {

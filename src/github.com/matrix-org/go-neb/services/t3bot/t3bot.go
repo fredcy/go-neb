@@ -472,7 +472,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	}
 	var messageText string
 	if s.TezosRank != 0 {
-		messageText = fmt.Sprintf("XTZ rank at CMC is <b>%i</b> (was %i)",
+		messageText = fmt.Sprintf("XTZ rank at CMC is <b>%d</b> (was %d)",
 			ticker.Cmc_rank, s.TezosRank)
 
 		// longer poll after reporting, to reduce thrashing
@@ -480,7 +480,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	} else {
 		// first time querying (since we don't know prior value)
 
-		//messageText = fmt.Sprintf("XTZ rank at CMC is <b>%i</b>",
+		//messageText = fmt.Sprintf("XTZ rank at CMC is <b>%d</b>",
 		//	         ticker.Cmc_rank)
 	}
 	s.TezosRank = ticker.Cmc_rank

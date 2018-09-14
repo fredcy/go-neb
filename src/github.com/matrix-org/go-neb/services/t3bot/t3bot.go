@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -206,7 +207,7 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 			},
 		},
 		types.Command{
-			Path: []string{"cmc"},
+			Path: []string{"cmc1"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return e.cmdCMC(cli, roomID, userID, args)
 			},
@@ -220,6 +221,13 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		},
 
 		types.Command{
+			Path: []string{"cmc"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return e.cmdCMCPro(cli, roomID, userID, args)
+			},
+		},
+
+		types.Command{
 			Path: []string{"cmcp"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return e.cmdCMCPro(cli, roomID, userID, args)
@@ -229,14 +237,14 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		types.Command{
 			Path: []string{"top"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				return e.cmdTop(cli, roomID, userID, 10, args)
+				return e.cmdTopPro(cli, roomID, userID, 10, args)
 			},
 		},
 
 		types.Command{
 			Path: []string{"toƿ"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				return e.cmdTop(cli, roomID, userID, 100, args)
+				return e.cmdTopPro(cli, roomID, userID, 100, args)
 			},
 		},
 
@@ -329,6 +337,28 @@ func (s *Service) cmdCMCPro(client *gomatrix.Client, roomID, userID string, args
 	return displayTickersPro(&tickers)
 }
 
+func (s *Service) cmdTopPro(client *gomatrix.Client, roomID, userID string, maxlimit int, args []string) (*gomatrix.HTMLMessage, error) {
+	limit := 5
+	if len(args) > 0 {
+		lim, err := strconv.Atoi(args[0])
+		if err == nil {
+			limit = lim
+		}
+	}
+
+	if limit > maxlimit {
+		return simpleMessage(fmt.Sprintf("Yeah, that would spam the room. Try %d or fewer.", maxlimit)), nil
+	}
+
+	if CmcProListings == nil {
+		log.Error("CmcProListings is empty")
+		return nil, fmt.Errorf("internal error")
+	}
+
+	ts := (*CmcProListings)[:limit]
+	return displayTickersPro(&ts)
+}
+
 func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) {
 	thead := `<thead><tr>
 <th>symbol</th>
@@ -378,6 +408,8 @@ func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) 
 	return &htmlMessage, nil
 }
 
+var RankReportedAt time.Time
+
 func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	pollingInterval := 10 * time.Minute
 	delayAfterReport := 60 * time.Minute
@@ -386,12 +418,18 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 
 	//return next   // STUB OFF
 
+	// Get fresh data for the top listings
 	listings, err := getCmcProListings()
 	if err != nil {
 		log.WithError(err).Error("getCmcProListings")
 		return next
 	} else {
 		CmcProListings = listings
+	}
+
+	if time.Since(RankReportedAt) < delayAfterReport {
+		log.Info("skipping rank-change since recently reported")
+		return next
 	}
 
 	var xtzListing *cmcProListing
@@ -434,7 +472,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	}
 	var messageText string
 	if s.TezosRank != 0 {
-		messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b> (was %s)",
+		messageText = fmt.Sprintf("XTZ rank at CMC is <b>%i</b> (was %i)",
 			ticker.Cmc_rank, s.TezosRank)
 
 		// longer poll after reporting, to reduce thrashing
@@ -442,7 +480,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	} else {
 		// first time querying (since we don't know prior value)
 
-		//messageText = fmt.Sprintf("XTZ rank at CMC is <b>%s</b>",
+		//messageText = fmt.Sprintf("XTZ rank at CMC is <b>%i</b>",
 		//	         ticker.Cmc_rank)
 	}
 	s.TezosRank = ticker.Cmc_rank
@@ -466,6 +504,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		}
 	}
 
+	RankReportedAt = time.Now()
 	return next
 }
 

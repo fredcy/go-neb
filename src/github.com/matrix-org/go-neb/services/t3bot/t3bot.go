@@ -309,6 +309,12 @@ func (s *Service) cmdCMCPro(client *gomatrix.Client, roomID, userID string, args
 		args = []string{"tezos"}
 	}
 
+	if CmcProListings == nil {
+		log.Error("CmcProListings is empty")
+		// TODO: try to get the latest listings right now?
+		return nil, fmt.Errorf("internal error")
+	}
+
 	var tickers []cmcProListing
 	for _, arg := range args {
 		target := strings.ToLower(arg)

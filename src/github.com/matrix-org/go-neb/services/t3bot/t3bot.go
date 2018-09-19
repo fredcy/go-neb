@@ -373,9 +373,9 @@ func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) 
 	rowFormat := `<tr>
 <td>%s</td>
 <td>%.2f</td>
-<td>%.2f</td>
-<td>%.2f</td>
-<td>%.2f</td>
+<td>%+.2f</td>
+<td>%+.2f</td>
+<td>%+.2f</td>
 <td>%d</td>
 <td>%.f</td>
 </tr>`
@@ -411,7 +411,10 @@ func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) 
 var RankReportedAt time.Time
 
 func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
-	pollingInterval := 10 * time.Minute
+	// The CMC Pro API allows 200 requests per day, so...
+	pollingInterval := 24 * time.Hour / 200
+
+	// After reporting a change, hold off on further reports for this time.
 	delayAfterReport := 60 * time.Minute
 
 	next := time.Now().Add(pollingInterval)

@@ -353,29 +353,23 @@ func (s *Service) cmdNeighborhood(client *gomatrix.Client, roomID, userID string
 
 	var tickers []cmcProListing
 	target := "tezos"
-	beforeI := -1
 	tezosI := -1
-	afterI := -1
 
 	// This assumes that CmcProListings is ordered by rank. We walk it and find
 	// the entries just before and after the one for tezos itself.
 	for i, item := range *CmcProListings {
-		if tezosI >= 0 {
-			afterI = i
-			break
-		} else if target == strings.ToLower(item.Symbol) || target == strings.ToLower(item.Name) {
+		if target == strings.ToLower(item.Symbol) || target == strings.ToLower(item.Name) {
 			tezosI = i
-		} else {
-			beforeI = i
+			break
 		}
 	}
 	if tezosI >= 0 {
-		if beforeI >= 0 {
-			tickers = append(tickers, (*CmcProListings)[beforeI])
+		if tezosI >= 1 {
+			tickers = append(tickers, (*CmcProListings)[tezosI-1])
 		}
 		tickers = append(tickers, (*CmcProListings)[tezosI])
-		if afterI >= 0 {
-			tickers = append(tickers, (*CmcProListings)[afterI])
+		if tezosI < len(*CmcProListings) {
+			tickers = append(tickers, (*CmcProListings)[tezosI+1])
 		}
 	}
 

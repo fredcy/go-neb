@@ -249,6 +249,13 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		},
 
 		types.Command{
+			Path: []string{"neighbors"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return e.cmdNeighborhood(cli, roomID, userID)
+			},
+		},
+
+		types.Command{
 			Path: []string{"mom-am-i-rich-yet"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return &gomatrix.TextMessage{"m.notice", "Not yet, dear one. Go back to work."}, nil
@@ -331,6 +338,44 @@ func (s *Service) cmdCMCPro(client *gomatrix.Client, roomID, userID string, args
 				tickers = append(tickers, item)
 				break
 			}
+		}
+	}
+
+	return displayTickersPro(&tickers)
+}
+
+func (s *Service) cmdNeighborhood(client *gomatrix.Client, roomID, userID string) (*gomatrix.HTMLMessage, error) {
+	if CmcProListings == nil {
+		log.Error("CmcProListings is empty")
+		// TODO: try to get the latest listings right now?
+		return nil, fmt.Errorf("internal error")
+	}
+
+	var tickers []cmcProListing
+	target := "tezos"
+	beforeI := -1
+	tezosI := -1
+	afterI := -1
+
+	// This assumes that CmcProListings is ordered by rank. We walk it and find
+	// the entries just before and after the one for tezos itself.
+	for i, item := range *CmcProListings {
+		if tezosI >= 0 {
+			afterI = i
+			break
+		} else if target == strings.ToLower(item.Symbol) || target == strings.ToLower(item.Name) {
+			tezosI = i
+		} else {
+			beforeI = i
+		}
+	}
+	if tezosI >= 0 {
+		if beforeI >= 0 {
+			tickers = append(tickers, (*CmcProListings)[beforeI])
+		}
+		tickers = append(tickers, (*CmcProListings)[tezosI])
+		if afterI >= 0 {
+			tickers = append(tickers, (*CmcProListings)[afterI])
 		}
 	}
 

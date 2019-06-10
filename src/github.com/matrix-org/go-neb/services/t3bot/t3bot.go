@@ -455,7 +455,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	pollingInterval := 24 * time.Hour / 200
 
 	// After reporting a change, hold off on further reports for this time.
-	delayAfterReport := 60 * time.Minute
+	delayAfterReport := 8 * time.Hour
 
 	next := time.Now().Add(pollingInterval)
 
@@ -489,8 +489,8 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 
 	tezosConcernsRoom := "!mOcZCzWBxvtSxNvWzz:matrix.org"
 	tezosTraderRoom := "!TUYwzSQkeKBLZlWldJ:matrix.org"
-	tezosRandomRoom := "!xDsCezbpSVokOfGwCI:matrix.org"
-	tezosRoom := "!KNlqwBRiVdbAwkVpKO:matrix.org"
+	//tezosRandomRoom := "!xDsCezbpSVokOfGwCI:matrix.org"
+	//tezosRoom := "!KNlqwBRiVdbAwkVpKO:matrix.org"
 
 	// Construct list of rooms in which to report a change in the Tezos CMC rank, along with the minimum rank to ever report for each room.
 	rooms := []struct {
@@ -498,9 +498,9 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		Limit  int
 	}{
 		{RoomID: tezosConcernsRoom, Limit: 2000},
-		{RoomID: tezosRandomRoom, Limit: 1000},
+		//{RoomID: tezosRandomRoom, Limit: 1000},
 		{RoomID: tezosTraderRoom, Limit: 100},
-		{RoomID: tezosRoom, Limit: 10},
+		//{RoomID: tezosRoom, Limit: 10},
 	}
 
 	ticker := *xtzListing

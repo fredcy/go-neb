@@ -258,7 +258,8 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		types.Command{
 			Path: []string{"mom-am-i-rich-yet"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				return &gomatrix.TextMessage{"m.notice", "Not yet, dear one. Go back to work."}, nil
+				//return &gomatrix.TextMessage{"m.notice", "Not yet, dear one. Go back to work."}, nil
+				return &gomatrix.TextMessage{"m.notice", "Not yet, dear one. Better not give up your day job."}, nil
 			},
 		},
 
@@ -487,7 +488,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	}
 
 	tezosConcernsRoom := "!mOcZCzWBxvtSxNvWzz:matrix.org"
-	tezosTraderRoom := "!TUYwzSQkeKBLZlWldJ:matrix.org"
+	//tezosTraderRoom := "!TUYwzSQkeKBLZlWldJ:matrix.org"
 	//tezosRandomRoom := "!xDsCezbpSVokOfGwCI:matrix.org"
 	//tezosRoom := "!KNlqwBRiVdbAwkVpKO:matrix.org"
 
@@ -498,7 +499,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	}{
 		{RoomID: tezosConcernsRoom, Limit: 2000},
 		//{RoomID: tezosRandomRoom, Limit: 1000},
-		{RoomID: tezosTraderRoom, Limit: 100},
+		//{RoomID: tezosTraderRoom, Limit: 100},
 		//{RoomID: tezosRoom, Limit: 10},
 	}
 

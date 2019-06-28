@@ -258,8 +258,7 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		types.Command{
 			Path: []string{"mom-am-i-rich-yet"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				//return &gomatrix.TextMessage{"m.notice", "Not yet, dear one. Go back to work."}, nil
-				return &gomatrix.TextMessage{"m.notice", "Not yet, dear one. Better not give up your day job."}, nil
+				return &gomatrix.TextMessage{"m.notice", "Not yet, dear one. Go back to work."}, nil
 			},
 		},
 

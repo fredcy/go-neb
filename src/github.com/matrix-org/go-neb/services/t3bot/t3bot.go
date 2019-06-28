@@ -512,10 +512,16 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 			"new": ticker.Cmc_rank,
 		}).Info("rank changed")
 	}
+
+	var bullMode bool = true
 	var messageText string
 	if s.TezosRank != 0 {
-		messageText = fmt.Sprintf("XTZ rank at CMC is <b>%d</b> (was %d)",
-			ticker.Cmc_rank, s.TezosRank)
+		if (!bullMode) || ticker.Cmc_rank < s.TezosRank {
+			messageText = fmt.Sprintf("XTZ rank at CMC is <b>%d</b> (was %d)",
+				ticker.Cmc_rank, s.TezosRank)
+		} else {
+			// don't report worsening rank if not in bull mode
+		}
 
 		// longer poll after reporting, to reduce thrashing
 		next = time.Now().Add(delayAfterReport)

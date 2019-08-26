@@ -22,7 +22,9 @@ const ServiceType = "t3bot"
 // Service represents the T3bot service. It has no Config fields.
 type Service struct {
 	types.DefaultService
-	TezosRank int
+	TezosRank        int
+	LastReportedRank int
+	RankReportedAt   time.Time
 }
 
 var roomsMessageHTML = `
@@ -447,11 +449,9 @@ func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) 
 	return &htmlMessage, nil
 }
 
-var RankReportedAt time.Time
-
 func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
-	// The CMC Pro API allows 200 requests per day, so...
-	pollingInterval := 24 * time.Hour / 200
+	// The CMC Pro API limits the requests per day, so...
+	pollingInterval := 24 * time.Hour / 333
 
 	// After reporting a change, hold off on further reports for this time.
 	delayAfterReport := 8 * time.Hour
@@ -469,11 +469,6 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		CmcProListings = listings
 	}
 
-	if time.Since(RankReportedAt) < delayAfterReport {
-		log.Info("skipping rank-change since recently reported")
-		return next
-	}
-
 	var xtzListing *cmcProListing
 	for _, item := range *CmcProListings {
 		if item.Symbol == "XTZ" {
@@ -487,7 +482,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	}
 
 	tezosConcernsRoom := "!mOcZCzWBxvtSxNvWzz:matrix.org"
-	tezosTraderRoom := "!TUYwzSQkeKBLZlWldJ:matrix.org"
+	//tezosTraderRoom := "!TUYwzSQkeKBLZlWldJ:matrix.org"
 	//tezosRandomRoom := "!xDsCezbpSVokOfGwCI:matrix.org"
 	//tezosRoom := "!KNlqwBRiVdbAwkVpKO:matrix.org"
 
@@ -497,14 +492,13 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		Limit  int
 	}{
 		{RoomID: tezosConcernsRoom, Limit: 2000},
+		//{RoomID: tezosTraderRoom, Limit: 100},
 		//{RoomID: tezosRandomRoom, Limit: 1000},
-		{RoomID: tezosTraderRoom, Limit: 100},
 		//{RoomID: tezosRoom, Limit: 10},
 	}
 
 	ticker := *xtzListing
 	if ticker.Cmc_rank == s.TezosRank {
-		//log.WithFields(log.Fields{"rank": ticker.Cmc_rank}).Info("rank unchanged")
 		return next
 	} else {
 		log.WithFields(log.Fields{
@@ -516,20 +510,19 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	var bullMode bool = true
 	var messageText string
 	if s.TezosRank != 0 {
-		if (!bullMode) || ticker.Cmc_rank < s.TezosRank {
+		timeSinceLastReport := time.Since(s.RankReportedAt)
+
+		if (ticker.Cmc_rank < s.LastReportedRank) || (!bullMode && (timeSinceLastReport >= delayAfterReport)) {
+			// report rank improvements immediately; or regressions if not bull mode and some time since last report
 			messageText = fmt.Sprintf("XTZ rank at CMC is <b>%d</b> (was %d)",
-				ticker.Cmc_rank, s.TezosRank)
+				ticker.Cmc_rank, s.LastReportedRank)
 		} else {
-			// don't report worsening rank if not in bull mode
+			// rank got worse and either we are in bull mode or we reported recently; so we don't report
 		}
-
-		// longer poll after reporting, to reduce thrashing
-		next = time.Now().Add(delayAfterReport)
 	} else {
-		// first time querying (since we don't know prior value)
-
-		//messageText = fmt.Sprintf("XTZ rank at CMC is <b>%d</b>",
-		//	         ticker.Cmc_rank)
+		// first time querying (since we don't know prior value); pretend that
+		// we reported the rank long ago
+		s.LastReportedRank = ticker.Cmc_rank
 	}
 	s.TezosRank = ticker.Cmc_rank
 
@@ -552,7 +545,8 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		}
 	}
 
-	RankReportedAt = time.Now()
+	s.RankReportedAt = time.Now()
+	s.LastReportedRank = ticker.Cmc_rank
 	return next
 }
 

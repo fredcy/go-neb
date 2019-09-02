@@ -35,7 +35,7 @@ Trading &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezostrader:tzch
 Gaming &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosgaming:matrix.org">#tezosgaming:matrix.org</a><br>
 Random &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosrandom:matrix.org">#tezosrandom:matrix.org</a><br>
 Philosophy &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosphilosophy:matrix.org">#tezosphilosophy:matrix.org</a><br>
-Governance &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosgovernance:matrix.org">#tezosgoverance:matrix.org</a><br>
+Governance &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosgovernance:matrix.org">#tezosgovernance:matrix.org</a><br>
 Ideas and Collaboration &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosfoundry:matrix.org">#tezosfoundry:matrix.org</a><br>
 (*): accessible by invitation only; ask for invitation
 `

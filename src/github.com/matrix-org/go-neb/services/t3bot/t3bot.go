@@ -450,8 +450,9 @@ func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) 
 }
 
 func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
-	// The CMC Pro API limits the requests per day, so...
-	pollingInterval := 24 * time.Hour / 333
+	// The CMC Pro API limits the requests per day and sends email warnings at the 9%% point, so...
+	var requestsPerDay = 333
+	pollingInterval := time.Duration(int64(24*time.Hour) / int64(float64(requestsPerDay)*0.94))
 
 	// After reporting a change, hold off on further reports for this time.
 	delayAfterReport := 8 * time.Hour

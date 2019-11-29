@@ -31,14 +31,14 @@ var roomsMessageHTML = `
 General &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezos:matrix.org">#tezos:matrix.org</a><br>
 Tech &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#freenode_#tezos:matrix.org">#freenode_#tezos:matrix.org</a><br>
 Media &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosmedia:matrix.org">#tezosmedia:matrix.org</a><br>
-Trading &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezostrader:tzchat.org">#tezostrader:tzchat.org</a> (*)<br>
-Gaming &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosgaming:matrix.org">#tezosgaming:matrix.org</a><br>
+Trading &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezostrader:matrix.org">#tezostrader:matrix.org</a><br>
+PermaBulls (Trading) &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezostrader:tzchat.org">#tezostrader:tzchat.org</a><br>
 Random &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosrandom:matrix.org">#tezosrandom:matrix.org</a><br>
 Philosophy &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosphilosophy:matrix.org">#tezosphilosophy:matrix.org</a><br>
 Governance &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosgovernance:matrix.org">#tezosgovernance:matrix.org</a><br>
 Ideas and Collaboration &nbsp;&nbsp;&nbsp; <a href="https://riot.im/app/#/room/#tezosfoundry:matrix.org">#tezosfoundry:matrix.org</a><br>
-(*): accessible by invitation only; ask for invitation
 `
+
 var sitesMessageHTML = `
 Tezos Developer Documentation: <a href="http://doc.tzalpha.net/">doc.tzalpha.net</a><br>
 Tezos development repository: <a href="https://gitlab.com/tezos/tezos">gitlab.com/tezos/tezos</a><br>

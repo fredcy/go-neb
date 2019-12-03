@@ -258,6 +258,13 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 		},
 
 		types.Command{
+			Path: []string{"knockknock"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return e.cmdKnockKnock(cli, roomID, userID)
+			},
+		},
+
+		types.Command{
 			Path: []string{"mom-am-i-rich-yet"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return &gomatrix.TextMessage{"m.notice", "Not yet, dear one. Go back to work."}, nil
@@ -372,6 +379,37 @@ func (s *Service) cmdNeighborhood(client *gomatrix.Client, roomID, userID string
 		tickers = append(tickers, (*CmcProListings)[tezosI])
 		if tezosI < len(*CmcProListings) {
 			tickers = append(tickers, (*CmcProListings)[tezosI+1])
+		}
+	}
+
+	return displayTickersPro(&tickers)
+}
+
+func (s *Service) cmdKnockKnock(client *gomatrix.Client, roomID, userID string) (*gomatrix.HTMLMessage, error) {
+	if CmcProListings == nil {
+		log.Error("CmcProListings is empty")
+		return nil, fmt.Errorf("internal error")
+	}
+
+	var tickers []cmcProListing
+	target := "tezos"
+	tezosI := -1
+
+	// This assumes that CmcProListings is ordered by rank. We walk it and find
+	// the tezos entry index.
+	for i, item := range *CmcProListings {
+		if target == strings.ToLower(item.Symbol) || target == strings.ToLower(item.Name) {
+			tezosI = i
+			break
+		}
+	}
+	if tezosI >= 0 {
+		firstI := tezosI - 3
+		if firstI < 0 {
+			firstI = 0
+		}
+		for i := firstI; i <= tezosI; i++ {
+			tickers = append(tickers, (*CmcProListings)[i])
 		}
 	}
 

@@ -521,7 +521,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 	}
 
 	tezosConcernsRoom := "!mOcZCzWBxvtSxNvWzz:matrix.org"
-	//tezosTraderRoom := "!TUYwzSQkeKBLZlWldJ:matrix.org"
+	tezosTraderRoom := "!TUYwzSQkeKBLZlWldJ:matrix.org"
 	//tezosRandomRoom := "!xDsCezbpSVokOfGwCI:matrix.org"
 	//tezosRoom := "!KNlqwBRiVdbAwkVpKO:matrix.org"
 
@@ -531,7 +531,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 		Limit  int
 	}{
 		{RoomID: tezosConcernsRoom, Limit: 2000},
-		//{RoomID: tezosTraderRoom, Limit: 100},
+		{RoomID: tezosTraderRoom, Limit: 10},
 		//{RoomID: tezosRandomRoom, Limit: 1000},
 		//{RoomID: tezosRoom, Limit: 10},
 	}

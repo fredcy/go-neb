@@ -451,7 +451,7 @@ func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) 
 
 	rowFormat := `<tr>
 <td>%s</td>
-<td>%.2f</td>
+<td>%.4g</td>
 <td>%+.2f</td>
 <td>%+.2f</td>
 <td>%+.2f</td>

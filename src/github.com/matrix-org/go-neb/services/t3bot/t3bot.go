@@ -438,6 +438,15 @@ func (s *Service) cmdTopPro(client *gomatrix.Client, roomID, userID string, maxl
 	return displayTickersPro(&ts)
 }
 
+func formatPrice(price float64) string {
+	if price >= 1000.0 {
+		// avoid display in scientific format that happens with "large exponent" in %g
+		return fmt.Sprintf("%.0f", price)
+	} else {
+		return fmt.Sprintf("%.4g", price)
+	}
+}
+
 func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) {
 	thead := `<thead><tr>
 <th>symbol</th>
@@ -451,7 +460,7 @@ func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) 
 
 	rowFormat := `<tr>
 <td>%s</td>
-<td>%.4g</td>
+<td>%s</td>
 <td>%+.2f</td>
 <td>%+.2f</td>
 <td>%+.2f</td>
@@ -461,7 +470,7 @@ func displayTickersPro(tickers *[]cmcProListing) (*gomatrix.HTMLMessage, error) 
 
 	tbody := `<tbody>`
 	for _, ticker := range *tickers {
-		tbody += fmt.Sprintf(rowFormat, ticker.Symbol, ticker.Quote.USD.Price,
+		tbody += fmt.Sprintf(rowFormat, ticker.Symbol, formatPrice(ticker.Quote.USD.Price),
 			ticker.Quote.USD.Percent_change_1h, ticker.Quote.USD.Percent_change_24h,
 			ticker.Quote.USD.Percent_change_7d,
 			ticker.Cmc_rank, ticker.Quote.USD.Market_cap/1000000)

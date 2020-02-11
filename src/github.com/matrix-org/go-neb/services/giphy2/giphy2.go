@@ -56,12 +56,11 @@ type Service struct {
 }
 
 const TezosConcernsRoomID = "!mOcZCzWBxvtSxNvWzz:matrix.org"
-const TezosRandomRoomID   = "!xDsCezbpSVokOfGwCI:matrix.org"
+const TezosRandomRoomID = "!xDsCezbpSVokOfGwCI:matrix.org"
 
 func allowedRoom(roomID string) bool {
-     return (roomID == TezosConcernsRoomID || roomID == TezosRandomRoomID)
+	return (roomID == TezosConcernsRoomID || roomID == TezosRandomRoomID)
 }
-
 
 // Commands supported:
 //   !giphy some search query without quotes
@@ -69,10 +68,10 @@ func allowedRoom(roomID string) bool {
 func (s *Service) Commands(client *gomatrix.Client) []types.Command {
 	return []types.Command{
 		types.Command{
-			Path: []string{"giphy"},
+			Path: []string{"giphy2"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				if allowedRoom(roomID) {
-				 	return s.cmdGiphy(client, roomID, userID, args)
+					return s.cmdGiphy(client, roomID, userID, args)
 				} else {
 					return nil, fmt.Errorf("giphy not allowed here")
 				}

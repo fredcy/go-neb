@@ -66,6 +66,28 @@ Developer sites:<br>
 <a href="https://github.com/obsidiansystems/ledger-app-tezos/blob/master/README.md">Ledger Applications</a><br>
 `
 
+var migrateMessageHTML = `
+<h3>Migrate Tezbox Wallet to Galleon</h3>
+<p>
+Tezbox is no longer actively supported and we recommend users migrate to Galleon wallet. Users with Nano Ledger hardware wallets can use Galleon by changing the derivation path to Tezbox under settings before connecting.
+</p>
+<ol>
+<li>Set RPC Server to Giganode
+<br>
+Go to Tezbox settings and change the server:
+<br>
+https://mainnet-tezos.giganode.io
+
+<li>Download Galleon Wallet
+<br>
+https://cryptonomic.tech/galleon.html
+
+<li>Follow Tezbox to Galleon Migration Guide
+<br>
+https://www.youtube.com/watch?v=fLnOcezCZU0
+</ol>
+`
+
 var roomsHTMLMessage = gomatrix.HTMLMessage{
 	MsgType:       "m.notice",
 	Format:        "org.matrix.custom.html",
@@ -88,6 +110,12 @@ var devSitesHTMLMessage = gomatrix.HTMLMessage{
 	MsgType:       "m.notice",
 	Format:        "org.matrix.custom.html",
 	FormattedBody: devSitesMessageHTML,
+}
+
+var migrateHTMLMessage = gomatrix.HTMLMessage{
+	MsgType:       "m.notice",
+	Format:        "org.matrix.custom.html",
+	FormattedBody: migrateMessageHTML,
 }
 
 /*
@@ -268,6 +296,13 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 			Path: []string{"mom-am-i-rich-yet"},
 			Command: func(roomID, userID string, args []string) (interface{}, error) {
 				return &gomatrix.TextMessage{"m.notice", "Not yet, dear one. Go back to work."}, nil
+			},
+		},
+
+		types.Command{
+			Path: []string{"migrate"},
+			Command: func(roomID, userID string, args []string) (interface{}, error) {
+				return migrateHTMLMessage, nil
 			},
 		},
 

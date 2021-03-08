@@ -8,10 +8,12 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/jaytaylor/html2text"
+	"github.com/matrix-org/go-neb/types"
 	"github.com/matrix-org/gomatrix"
 	"github.com/shopspring/decimal"
+	log "github.com/sirupsen/logrus"
+	"maunium.net/go/mautrix/id"
 )
 
 type cmcTicker struct {
@@ -28,7 +30,7 @@ type cmcTicker struct {
 
 var allTickers []cmcTicker
 
-func (s *Service) cmdCMC(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
+func (s *Service) cmdCMC(client types.MatrixClient, roomID id.RoomID, userID id.UserID, args []string) (*gomatrix.HTMLMessage, error) {
 	var tickers []cmcTicker
 
 	// Make sure we have data about all coins known by CMC, which findCoinID()

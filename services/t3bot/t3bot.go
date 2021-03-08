@@ -10,10 +10,11 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/jaytaylor/html2text"
 	"github.com/matrix-org/go-neb/types"
 	"github.com/matrix-org/gomatrix"
+	log "github.com/sirupsen/logrus"
+	"maunium.net/go/mautrix/id"
 )
 
 // ServiceType of the T3bot service
@@ -159,41 +160,41 @@ func simpleMessage(message string) *gomatrix.HTMLMessage {
 // Commands supported:
 //    !t3bot some message
 // Responds with a notice of "some message".
-func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
+func (e *Service) Commands(cli types.MatrixClient) []types.Command {
 	return []types.Command{
 		types.Command{
 			Path: []string{"t3bot"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				return &gomatrix.TextMessage{"m.notice", strings.Join(args, " ")}, nil
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
+				return &gomatrix.TextMessage{MsgType: "m.notice", Body: strings.Join(args, " ")}, nil
 			},
 		},
 		types.Command{
 			Path: []string{"rooms"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return roomsHTMLMessage, nil
 			},
 		},
 		types.Command{
 			Path: []string{"sites"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return sitesHTMLMessage, nil
 			},
 		},
 		types.Command{
 			Path: []string{"tezos"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return tezosHTMLMessage, nil
 			},
 		},
 		types.Command{
 			Path: []string{"devsites"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return devSitesHTMLMessage, nil
 			},
 		},
 		types.Command{
 			Path: []string{"hitbtc"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				query := strings.Join(args, "/")
 				response, err := e.cmdHitBTC(cli, roomID, userID, query)
 				if err != nil {
@@ -201,13 +202,13 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 				} else {
 					var out bytes.Buffer
 					json.Indent(&out, *response, "", "    ")
-					return &gomatrix.TextMessage{"m.notice", out.String()}, nil
+					return &gomatrix.TextMessage{MsgType: "m.notice", Body: out.String()}, nil
 				}
 			},
 		},
 		types.Command{
 			Path: []string{"ticker"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				query := "ticker/" + strings.Join(args, "")
 				response, err := e.cmdHitBTC(cli, roomID, userID, query)
 				if err != nil {
@@ -215,13 +216,13 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 				} else {
 					var out bytes.Buffer
 					json.Indent(&out, *response, "", "    ")
-					return &gomatrix.TextMessage{"m.notice", out.String()}, nil
+					return &gomatrix.TextMessage{MsgType: "m.notice", Body: out.String()}, nil
 				}
 			},
 		},
 		types.Command{
 			Path: []string{"iou"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				query := "ticker/XTZUSD"
 				response, err := e.cmdHitBTC(cli, roomID, userID, query)
 				if err != nil {
@@ -232,76 +233,76 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 					if err2 != nil {
 						return nil, err
 					}
-					return &gomatrix.TextMessage{"m.notice", t.Last + " $/ꜩ"}, nil
+					return &gomatrix.TextMessage{MsgType: "m.notice", Body: t.Last + " $/ꜩ"}, nil
 				}
 			},
 		},
 		types.Command{
 			Path: []string{"cmc1"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return e.cmdCMC(cli, roomID, userID, args)
 			},
 		},
 
 		types.Command{
 			Path: []string{"cmc2"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return e.cmdCMC2(cli, roomID, userID, args)
 			},
 		},
 
 		types.Command{
 			Path: []string{"cmc"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return e.cmdCMCPro(cli, roomID, userID, args)
 			},
 		},
 
 		types.Command{
 			Path: []string{"cmcp"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return e.cmdCMCPro(cli, roomID, userID, args)
 			},
 		},
 
 		types.Command{
 			Path: []string{"top"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return e.cmdTopPro(cli, roomID, userID, 10, args)
 			},
 		},
 
 		types.Command{
 			Path: []string{"toƿ"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return e.cmdTopPro(cli, roomID, userID, 100, args)
 			},
 		},
 
 		types.Command{
 			Path: []string{"neighbors"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return e.cmdNeighborhood(cli, roomID, userID)
 			},
 		},
 
 		types.Command{
 			Path: []string{"knockknock"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return e.cmdKnockKnock(cli, roomID, userID)
 			},
 		},
 
 		types.Command{
 			Path: []string{"mom-am-i-rich-yet"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
-				return &gomatrix.TextMessage{"m.notice", "Not yet, dear one. Go back to work."}, nil
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
+				return &gomatrix.TextMessage{MsgType: "m.notice", Body: "Not yet, dear one. Go back to work."}, nil
 			},
 		},
 
 		types.Command{
 			Path: []string{"migrate"},
-			Command: func(roomID, userID string, args []string) (interface{}, error) {
+			Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
 				return migrateHTMLMessage, nil
 			},
 		},
@@ -327,8 +328,8 @@ func (e *Service) Commands(cli *gomatrix.Client) []types.Command {
 func callAndResponse(cmd, response string) types.Command {
 	return types.Command{
 		Path: []string{cmd},
-		Command: func(roomID, userID string, args []string) (interface{}, error) {
-			return &gomatrix.TextMessage{"m.notice", response}, nil
+		Command: func(roomID id.RoomID, userID id.UserID, args []string) (interface{}, error) {
+			return &gomatrix.TextMessage{MsgType: "m.notice", Body: response}, nil
 		},
 	}
 }
@@ -343,11 +344,11 @@ var badwordsRegex = regexp.MustCompile(`(?i:^.*\b(gevers|guido|tzlibre)\b.*$)`)
 var badwordsExpand = types.Expansion{
 	Regexp: badwordsRegex,
 
-	Expand: func(roomID, userID string, matches []string) interface{} {
+	Expand: func(roomID id.RoomID, userID id.UserID, matches []string) interface{} {
 		log.WithFields(log.Fields{"room_id": roomID, "user_id": userID, "matches": matches}).Print("badwords matched")
 		return &gomatrix.TextMessage{
-			"m.notice",
-			fmt.Sprintf("%s used a bad word", userID),
+			MsgType: "m.notice",
+			Body:    fmt.Sprintf("%s used a bad word", userID),
 		}
 	},
 }
@@ -363,7 +364,7 @@ func (s *Service) Expansions(cli *gomatrix.Client) []types.Expansion {
 var CmcProListings *[]cmcProListing
 var CmcProMap *[]cmcProMapItem
 
-func (s *Service) cmdCMCPro(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
+func (s *Service) cmdCMCPro(client types.MatrixClient, roomID id.RoomID, userID id.UserID, args []string) (*gomatrix.HTMLMessage, error) {
 	if len(args) == 0 {
 		args = []string{"tezos"}
 	}
@@ -388,7 +389,7 @@ func (s *Service) cmdCMCPro(client *gomatrix.Client, roomID, userID string, args
 	return displayTickersPro(&tickers)
 }
 
-func (s *Service) cmdNeighborhood(client *gomatrix.Client, roomID, userID string) (*gomatrix.HTMLMessage, error) {
+func (s *Service) cmdNeighborhood(client types.MatrixClient, roomID id.RoomID, userID id.UserID) (*gomatrix.HTMLMessage, error) {
 	if CmcProListings == nil {
 		log.Error("CmcProListings is empty")
 		// TODO: try to get the latest listings right now?
@@ -420,7 +421,7 @@ func (s *Service) cmdNeighborhood(client *gomatrix.Client, roomID, userID string
 	return displayTickersPro(&tickers)
 }
 
-func (s *Service) cmdKnockKnock(client *gomatrix.Client, roomID, userID string) (*gomatrix.HTMLMessage, error) {
+func (s *Service) cmdKnockKnock(client types.MatrixClient, roomID id.RoomID, userID id.UserID) (*gomatrix.HTMLMessage, error) {
 	if CmcProListings == nil {
 		log.Error("CmcProListings is empty")
 		return nil, fmt.Errorf("internal error")
@@ -451,7 +452,7 @@ func (s *Service) cmdKnockKnock(client *gomatrix.Client, roomID, userID string) 
 	return displayTickersPro(&tickers)
 }
 
-func (s *Service) cmdTopPro(client *gomatrix.Client, roomID, userID string, maxlimit int, args []string) (*gomatrix.HTMLMessage, error) {
+func (s *Service) cmdTopPro(client types.MatrixClient, roomID id.RoomID, userID id.UserID, maxlimit int, args []string) (*gomatrix.HTMLMessage, error) {
 	limit := 5
 	if len(args) > 0 {
 		lim, err := strconv.Atoi(args[0])
@@ -634,7 +635,7 @@ func (s *Service) OnPoll(cli *gomatrix.Client) time.Time {
 }
 
 func init() {
-	types.RegisterService(func(serviceID, serviceUserID, webhookEndpointURL string) types.Service {
+	types.RegisterService(func(serviceID string, serviceUserID id.UserID, webhookEndpointURL string) types.Service {
 		return &Service{
 			DefaultService: types.NewDefaultService(serviceID, serviceUserID, ServiceType),
 		}

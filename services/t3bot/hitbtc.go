@@ -2,9 +2,10 @@ package t3bot
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/matrix-org/gomatrix"
+	"github.com/matrix-org/go-neb/types"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
+	"maunium.net/go/mautrix/id"
 	"net/http"
 )
 
@@ -12,7 +13,7 @@ type ticker struct {
 	Last string `json:"last"`
 }
 
-func (s *Service) cmdHitBTC(client *gomatrix.Client, roomID, userID, query string) (*[]byte, error) {
+func (s *Service) cmdHitBTC(client types.MatrixClient, roomID id.RoomID, userID id.UserID, query string) (*[]byte, error) {
 	log.Info("querying HitBTC for ", query)
 
 	url := "https://api.hitbtc.com/api/2/public/" + query

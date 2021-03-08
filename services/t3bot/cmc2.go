@@ -4,10 +4,12 @@ package t3bot
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"github.com/jaytaylor/html2text"
+	"github.com/matrix-org/go-neb/types"
 	"github.com/matrix-org/gomatrix"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
+	"maunium.net/go/mautrix/id"
 	"net/http"
 	"strconv"
 	"strings"
@@ -51,7 +53,7 @@ type cmcTickerResponse2 struct {
 
 var allTickers2 []cmcListing2
 
-func (s *Service) cmdCMC2(client *gomatrix.Client, roomID, userID string, args []string) (*gomatrix.HTMLMessage, error) {
+func (s *Service) cmdCMC2(client types.MatrixClient, roomID id.RoomID, userID id.UserID, args []string) (*gomatrix.HTMLMessage, error) {
 	var tickers []cmcTicker2
 
 	// Make sure we have data about all coins known by CMC, which findCoinID()

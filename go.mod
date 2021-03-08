@@ -25,6 +25,7 @@ require (
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/lib/pq v1.7.0
 	github.com/matrix-org/dugong v0.0.0-20180820122854-51a565b5666b
+	github.com/matrix-org/gomatrix v0.0.0-20200827122206-7dd5e2a05bcd
 	github.com/matrix-org/util v0.0.0-20190711121626-527ce5ddefc7
 	github.com/mattn/go-shellwords v1.0.10
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
@@ -35,13 +36,14 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223 // indirect
 	github.com/olekukonko/tablewriter v0.0.4 // indirect
-	github.com/pkg/errors v0.9.1
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v0.8.1-0.20160916180340-5636dc67ae77
 	github.com/prometheus/client_model v0.0.0-20150212101744-fa8ad6fec335 // indirect
 	github.com/prometheus/common v0.0.0-20161002210234-85637ea67b04 // indirect
 	github.com/prometheus/procfs v0.0.0-20160411190841-abf152e5f3e9 // indirect
 	github.com/russross/blackfriday v1.5.2
-	github.com/sasha-s/go-deadlock v0.2.0
+	github.com/sasha-s/go-deadlock v0.2.0 // indirect
+	github.com/shopspring/decimal v1.2.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	golang.org/dl v0.0.0-20200601221412-a954fa24b3e5 // indirect
